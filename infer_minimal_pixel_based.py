@@ -20,45 +20,50 @@ def process_bboxes(bboxes, h, w, slide_thresh=0.3):
     bboxes = [( max(0, bbox[0]), max(0, bbox[1]), min(w, bbox[2]), min(h, bbox[3])) for bbox in bboxes]
 
     bboxes = set(bboxes)
-    slide_bboxes = set()
-    for bbox in bboxes:
-        xmin, ymin, xmax, ymax = bbox
-        box_h = ymax - ymin
-        thresh_h = slide_thresh * box_h
-        if ymin < thresh_h or (h - ymax) < thresh_h:
-            slide_bboxes.add(bbox)
-
-    # 计算平均高度不能包括边界。碰到了边界上的一堆点变成了一连串的碎掉的点.
-
-    centre_bboxes = bboxes - slide_bboxes
-    if len(centre_bboxes) > 0:
-        bboxs_h = [(bbox[3] - bbox[1]) for bbox in centre_bboxes]
-    else:
-        bboxs_h = [(bbox[3] - bbox[1]) for bbox in bboxes]
-    bboxs_h.sort()  # inplace sort
-    median = bboxs_h[int(len(bboxs_h) / 2)]  # 一张图片文字高度的中位数
-
-    for bbox in bboxes.copy():
-        if bbox[3] - bbox[1] > median * 1.5 or bbox[3] - bbox[1] < median * 0.5:
-            bboxes.remove(bbox)
-
-    # 进一步去判断slide_bboxes
-    for bbox in slide_bboxes:
-        if bbox[3] - bbox[1] < median * 0.7:
-            if bbox in bboxes:  # 可能前面已经删除过了
-                bboxes.remove(bbox)
+    # slide_bboxes = set()
+    # for bbox in bboxes:
+    #     xmin, ymin, xmax, ymax = bbox
+    #     box_h = ymax - ymin
+    #     thresh_h = slide_thresh * box_h
+    #     if ymin < thresh_h or (h - ymax) < thresh_h:
+    #         slide_bboxes.add(bbox)
+    #
+    # # 计算平均高度不能包括边界。碰到了边界上的一堆点变成了一连串的碎掉的点.
+    #
+    # centre_bboxes = bboxes - slide_bboxes
+    # if len(centre_bboxes) > 0:
+    #     bboxs_h = [(bbox[3] - bbox[1]) for bbox in centre_bboxes]
+    # else:
+    #     bboxs_h = [(bbox[3] - bbox[1]) for bbox in bboxes]
+    # bboxs_h.sort()  # inplace sort
+    # median = bboxs_h[int(len(bboxs_h) / 2)]  # 一张图片文字高度的中位数
+    #
+    # for bbox in bboxes.copy():
+    #     if bbox[3] - bbox[1] > median * 1.5 or bbox[3] - bbox[1] < median * 0.5:
+    #         bboxes.remove(bbox)
+    #
+    # # 进一步去判断slide_bboxes
+    # for bbox in slide_bboxes:
+    #     if bbox[3] - bbox[1] < median * 0.7:
+    #         if bbox in bboxes:  # 可能前面已经删除过了
+    #             bboxes.remove(bbox)
 
     # 上边界的比例， 下边界的比例. 宽度为32像素的图，实际文字大小只有24. 上下只扩充实际大小的1/6
+    # bboxes_p = set()
+    # for bbox in bboxes:
+    #     expand = (bbox[3] - bbox[1])/6
+    #     bboxes_p.add((bbox[0], max(0, bbox[1]-expand),  bbox[2], min(h, bbox[3]+expand)))
+    # 统一4像素扩充
     bboxes_p = set()
     for bbox in bboxes:
-        expand = (bbox[3] - bbox[1])/6
-        bboxes_p.add((bbox[0], max(0, bbox[1]-expand),  bbox[2], min(h, bbox[3]+expand)))
+        # expand = (bbox[3] - bbox[1]) / 6
+        bboxes_p.add((bbox[0], max(0, bbox[1] - 4), bbox[2], min(h, bbox[3] + 4)))
     return bboxes_p
 
 
 def img_generator(folder):
     file_list = [os.path.join(folder, item) for item in os.listdir(folder)]
-    img_paths = list(filter(lambda item: item.split('.')[-1] == 'png', file_list))
+    img_paths = list(filter(lambda item: item.split('.')[-1] == 'jpg', file_list))
     for img_path in img_paths:
         img = cv2.imread(img_path)
         img, angle = correct_image(img)
@@ -83,7 +88,7 @@ if __name__ == '__main__':
     net = net.to(device)
     net.eval()
 
-    #ori_imgs_path = "/media/Data/wangjunjie_code/advancedEast/dataset/junior_biology"
+    # ori_imgs_path = "/media/Data/wangjunjie_code/advancedEast/dataset/junior_biology"
     ori_imgs_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/'
     img_gen = img_generator(ori_imgs_path)
 

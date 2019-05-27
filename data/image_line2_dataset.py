@@ -39,7 +39,7 @@ def cal_bbox(x_min, y_min, x_max, y_max, bboxs):
     bboxs_target = []
     for bbox in bboxs:
         # 高度方面，只要出现1/3在外面就不检测， 宽度方面， 只要超过一个h就要检测
-        tol_pix_h = (bbox[3]-bbox[1]) / 3
+        tol_pix_h = (bbox[3]-bbox[1]) / 5
         tol_pix_w = bbox[3]-bbox[1]
 
         c_xmin = bbox[0] - x_min
@@ -124,14 +124,14 @@ def create_heat_map_patch(xmin, ymin, xmax, ymax):
     return np.tile(line_pach, (1, xmax))
 
 
-class ImageLineDataset(data.Dataset):
+class ImageLine2Dataset(data.Dataset):
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
         return parser
 
     def __init__(self, opt):
-        super(ImageLineDataset, self).__init__()
+        super(ImageLine2Dataset, self).__init__()
         self.opt = opt
         img_files = []
         exts = ['png', 'jpg', 'jpeg', 'JPG']
@@ -236,8 +236,8 @@ if __name__ == '__main__':
     opt = Opt()
 
     data_loader = torch.utils.data.DataLoader(
-        ImageLineDataset(opt), shuffle=False, batch_size=1, num_workers=1,
-        collate_fn=ImageLineDataset.collate_fn)
+        ImageLine2Dataset(opt), shuffle=False, batch_size=1, num_workers=1,
+        collate_fn=ImageLine2Dataset.collate_fn)
     # 注意这样得到的通道数在最后，默认的
     for ii, (image, heatmap) in enumerate(data_loader):
         image = np.squeeze(image, axis=0)

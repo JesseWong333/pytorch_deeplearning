@@ -11,7 +11,7 @@ class BaseOptions():
 
     def initialize(self, parser):
         # 实验的基本配置：名字，使用的模型, 训阶段
-        parser.add_argument('--name', type=str, default='pixel_based',
+        parser.add_argument('--name', type=str, default='pixel_based_OHEM2',
                             help='name of the experiment. It decides where to store samples and models')
         parser.add_argument('--model', type=str, default='pixel_based',
                             help='chooses which model to use.')
@@ -19,14 +19,14 @@ class BaseOptions():
 
         # 杂项
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
-        parser.add_argument('--gpu_ids', type=str, default='0,1', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+        parser.add_argument('--gpu_ids', type=str, default='0,1,2,3', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
         # 数据相关： 数据路径、使用的datasets、装载数据的线程数、batch_sizes
         parser.add_argument('--dataroot', type=str, default='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/',
                             help='path to images')
-        parser.add_argument('--dataset', type=str, default='image_line_dataset', help='which customized dataset to use?')
+        parser.add_argument('--dataset', type=str, default='image_line2_dataset', help='which customized dataset to use?')
         parser.add_argument('--num_threads', default=10, type=int, help='# threads for loading data')
-        parser.add_argument('--batch_size', default=10, type=int, help='batch size')
+        parser.add_argument('--batch_size', default=15, type=int, help='batch size')
 
         # 模型存储相关： 存储路径，多少epoch存储一次. 暂存为latest模型的时间
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')

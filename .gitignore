@@ -1,9 +1,10 @@
 .DS_Store
 *.pth
 *.pyc
+*.pyx
 *.pyo
 *.log
 *.tmp
 *tmp*
-*idea*
+*idea
 

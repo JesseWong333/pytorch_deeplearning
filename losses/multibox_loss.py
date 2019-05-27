@@ -127,14 +127,13 @@ class MultiBoxHeadLoss(nn.Module):
         # loc_t = Variable(loc_t, requires_grad=False)    # 编码之后的坐标
         # conf_t = Variable(conf_t, requires_grad=False)  # [batch_size, num_priors] 每个prior box的框对应标签, 最大可能性的
 
-
-        pos = conf_t > 0   # 不是背景的位置
+        pos = conf_t > 0   # 前景的位置
 
         # Localization Loss (Smooth L1)
         # Shape: [batch,num_priors,4]
         pos_idx = pos.unsqueeze(pos.dim()).expand_as(loc_data)  # pos_idx对应不是背景的位置，
-        loc_p = loc_data[pos_idx].view(-1,4)  # pos_idx 剩下的就都是前景的位置了， 所以这里的回归的坐标值是只考虑前景的
-        loc_t = loc_t[pos_idx].view(-1,4)
+        loc_p = loc_data[pos_idx].view(-1, 4)  # pos_idx 剩下的就都是前景的位置了， 所以这里的回归的坐标值是只考虑前景的
+        loc_t = loc_t[pos_idx].view(-1, 4)
         loss_l = F.smooth_l1_loss(loc_p, loc_t, size_average=False)
 
         # Compute max conf across batch for hard negative mining
@@ -143,12 +142,12 @@ class MultiBoxHeadLoss(nn.Module):
 
         # Hard Negative Mining 默认做hard negative mining, 前面的选项并没有起作用, 所谓的hard mining这里就是加权
         loss_c[pos.view(-1)] = 0  # filter out pos boxes for now  # 将所有的前景loss_c 置位0
-        loss_c = loss_c.view(num, -1)
+        loss_c = loss_c.view(num, -1)  # 第一维还是得batch_size, 排至
         _, loss_idx = loss_c.sort(1, descending=True)
-        _, idx_rank = loss_idx.sort(1)
-        num_pos = pos.long().sum(1, keepdim=True)
+        _, idx_rank = loss_idx.sort(1)  # ???, 怎么还排序了???
+        num_pos = pos.long().sum(1, keepdim=True)  # 10*1, 还是保持每张图片分开
         num_neg = torch.clamp(self.negpos_ratio*num_pos, max=pos.size(1)-1)
-        neg = idx_rank < num_neg.expand_as(idx_rank)
+        neg = idx_rank < num_neg.expand_as(idx_rank)  # 这么一个比较idx_rank又退化了一层？ 难以理解
 
         # Confidence Loss Including Positive and Negative Examples
         pos_idx = pos.unsqueeze(2).expand_as(conf_data)

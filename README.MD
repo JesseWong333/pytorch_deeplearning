@@ -16,7 +16,7 @@ Jesse Wong at aiyunxiao
 
 # This project is still under development
 Now including 2 text detection methods
-- C^2TD: a fast and roubust text detector via centre line regression and centre border probability
+- C^2TD: a fast and robust text detector via centre line regression and centre border probability
 - anchor-based key point detection 
  
 

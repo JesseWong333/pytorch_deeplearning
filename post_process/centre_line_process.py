@@ -46,9 +46,9 @@ def process(out, img, file_name, thresh=0.8, save_path='/media/Data/wangjunjie_c
     scores = scores*255
 
     # todo: 调试代码： 可视化激活
-    # cond = np.greater_equal(scores, 255*thresh)
-    # activation_pixels = np.where(cond)
-    # draw_activate(Image.fromarray(img), activation_pixels, file_name)
+    cond = np.greater_equal(scores, 255*thresh)
+    activation_pixels = np.where(cond)
+    draw_activate(Image.fromarray(img), activation_pixels, file_name)
 
     # 或者这里可以先计算图片的梯度
     # _, bin = cv2.threshold(scores, 125, 255, cv2.THRESH_BINARY)
@@ -83,8 +83,8 @@ def process(out, img, file_name, thresh=0.8, save_path='/media/Data/wangjunjie_c
         # aspect_ratio = float(w) / h  # 不应该看矩形的宽高比， 应该按照最后的宽高比滤掉
         # if aspect_ratio < 1:
         #     continue
-        xmin = (x-0.5) * 4
-        xmax = (x+w+0.5) * 4
+        xmin = (x-1.5) * 4   # 原来都是设置0.5
+        xmax = (x+w+1.5) * 4
 
         roi = scores_ori[y:y+h, x:x+w]
         # 只看其中的部分像素的高和宽即可
@@ -108,7 +108,7 @@ def process(out, img, file_name, thresh=0.8, save_path='/media/Data/wangjunjie_c
             cords.append((xmin, ave_top, xmax, ave_down))
 
     # 滤除噪音
-    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 1.8, cords))
+    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 2, cords))
 
 
     # todo 调试代码
