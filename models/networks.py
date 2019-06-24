@@ -20,6 +20,8 @@ cfg = {
           'M', 512, 512, 512, 'O', 'M', 512, 512, 512, 'O', 'C', 1024, 1024, 'O'],  # VGG_16 with extra layers
     'R': [64, 64, 'M', 128, 128, 'M', 256, 256, 256,
           'M', 512, 512, 512, 'M', 512, 512, 512],  # VGG_16 for RFB
+    'S': [64, 64, 'M', 128, 128, 'M', 256, 256, 256,
+          'M', 512, 512, 512, 'M', 512, 512, 512, 'M', 512, 512, 'M', 512, 512],  # VGG with extra layers. 需要有6个pooling层
 }
 
 
@@ -226,6 +228,98 @@ class VGGRFBNet(nn.Module):
         return conf, loc_head, loc_tail
 
 
+class VGGSkew(nn.Module):
+    def __init__(self, in_channels=3, channel_width=1, norm_type='batch'):
+        super(VGGSkew, self).__init__()
+        layers, endpoint_index = make_layers(cfg['S'], in_channels, channel_width, norm_type)
+        self.vgg = nn.Sequential(*layers)
+        self.head = nn.Sequential(*make_head([512], 2))
+
+    def forward(self, x):
+        x = self.vgg(x)
+        x = self.head(x)
+        return x
+
+# Defines the Unet generator.
+# |num_downs|: number of downsamplings in UNet. For example,
+# if |num_downs| == 7, image of size 128x128 will become of size 1x1
+# at the bottleneck
+class Unet(nn.Module):
+    def __init__(self, input_nc, output_nc, num_downs, ngf=64,
+                 norm_layer=nn.BatchNorm2d, use_dropout=False):
+        super(Unet, self).__init__()
+
+        # construct unet structure
+        unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=None, norm_layer=norm_layer, innermost=True)
+        for i in range(num_downs - 5):
+            unet_block = UnetSkipConnectionBlock(ngf * 8, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer, use_dropout=use_dropout)
+        unet_block = UnetSkipConnectionBlock(ngf * 4, ngf * 8, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock(ngf * 2, ngf * 4, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock(ngf, ngf * 2, input_nc=None, submodule=unet_block, norm_layer=norm_layer)
+        unet_block = UnetSkipConnectionBlock(output_nc, ngf, input_nc=input_nc, submodule=unet_block, outermost=True, norm_layer=norm_layer)
+
+        self.model = unet_block
+
+    def forward(self, input):
+        return self.model(input)
+
+
+# Defines the submodule with skip connection.
+# X -------------------identity---------------------- X
+#   |-- downsampling -- |submodule| -- upsampling --|
+class UnetSkipConnectionBlock(nn.Module):
+    def __init__(self, outer_nc, inner_nc, input_nc=None,
+                 submodule=None, outermost=False, innermost=False, norm_layer=nn.BatchNorm2d, use_dropout=False):
+        super(UnetSkipConnectionBlock, self).__init__()
+        self.outermost = outermost
+        if type(norm_layer) == functools.partial:
+            use_bias = norm_layer.func == nn.InstanceNorm2d
+        else:
+            use_bias = norm_layer == nn.InstanceNorm2d
+        if input_nc is None:
+            input_nc = outer_nc
+        downconv = nn.Conv2d(input_nc, inner_nc, kernel_size=4,
+                             stride=2, padding=1, bias=use_bias)  # kernel_size = 4, stride =2, padding=1的设定feaMap一半
+        downrelu = nn.LeakyReLU(0.2, True)
+        downnorm = norm_layer(inner_nc)
+        uprelu = nn.ReLU(True)
+        upnorm = norm_layer(outer_nc)
+
+        if outermost:
+            upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
+                                        kernel_size=4, stride=2,
+                                        padding=1)
+            down = [downconv]
+            up = [uprelu, upconv, nn.Tanh()]  # 最外面加的是Tanh
+            model = down + [submodule] + up
+        elif innermost:
+            upconv = nn.ConvTranspose2d(inner_nc, outer_nc,
+                                        kernel_size=4, stride=2,
+                                        padding=1, bias=use_bias)
+            down = [downrelu, downconv]  # 先relu 再downconv??  第一个relu是不会有作用的，图像全部是0~255, 在norm
+            up = [uprelu, upconv, upnorm]
+            model = down + up
+        else:
+            upconv = nn.ConvTranspose2d(inner_nc * 2, outer_nc,
+                                        kernel_size=4, stride=2,
+                                        padding=1, bias=use_bias)
+            down = [downrelu, downconv, downnorm]
+            up = [uprelu, upconv, upnorm]
+
+            if use_dropout:
+                model = down + [submodule] + up + [nn.Dropout(0.5)]
+            else:
+                model = down + [submodule] + up
+
+        self.model = nn.Sequential(*model)
+
+    def forward(self, x):
+        if self.outermost:
+            return self.model(x)
+        else:
+            return torch.cat([x, self.model(x)], 1)  # Unet是有特征copy的
+
+
 def get_scheduler(optimizer, opt):
     if opt.lr_policy == 'lambda':
         def lambda_rule(epoch):
@@ -247,6 +341,9 @@ if __name__ == '__main__':
     # net = VGGPixel(in_channels=3, out_channel=1, channel_width=1, norm_type='batch')
     # d = net(torch.rand(1, 3, 256, 256))
 
-    net = VGGRFBNet(in_channels=3, channel_width=1, norm_type='batch')
-    d = net(torch.rand(1, 3, 256, 256))
+    # net = VGGRFBNet(in_channels=3, channel_width=1, norm_type='batch')
+    # d = net(torch.rand(1, 3, 256, 256))
+
+    net = VGGSkew(in_channels=3, channel_width=1, norm_type='batch')
+    d = net(torch.rand(1, 3, 512, 1024))
     pass

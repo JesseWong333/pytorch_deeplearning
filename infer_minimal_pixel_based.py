@@ -63,7 +63,7 @@ def process_bboxes(bboxes, h, w, slide_thresh=0.3):
 
 def img_generator(folder):
     file_list = [os.path.join(folder, item) for item in os.listdir(folder)]
-    img_paths = list(filter(lambda item: item.split('.')[-1] == 'jpg', file_list))
+    img_paths = list(filter(lambda item: item.split('.')[-1] == 'png', file_list))
     for img_path in img_paths:
         img = cv2.imread(img_path)
         img, angle = correct_image(img)
@@ -89,7 +89,8 @@ if __name__ == '__main__':
     net.eval()
 
     # ori_imgs_path = "/media/Data/wangjunjie_code/advancedEast/dataset/junior_biology"
-    ori_imgs_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/'
+    # ori_imgs_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/'
+    ori_imgs_path = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/text_images/images/'
     img_gen = img_generator(ori_imgs_path)
 
     from tqdm import tqdm
