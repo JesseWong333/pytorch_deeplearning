@@ -2,6 +2,7 @@ import torch
 import itertools
 from .networks import VGGSkew
 from .base_model import BaseModel
+from losses.ohem_loss import OHEML1Loss
 from torchvision.transforms.functional import to_tensor
 
 
@@ -32,7 +33,7 @@ class SkewModel(BaseModel):
         self.optimizer = torch.optim.Adam(itertools.chain(self.net.parameters()),
                                                 lr=opt.lr)
         # 初始化损失函数, 检测的网络通常有很复杂的loss
-        self.criterion = torch.nn.L1Loss()
+        self.criterion = OHEML1Loss()
 
         # 会调用父类的setup方法为optimizers设置lr schedulers
         self.optimizers = []

@@ -19,14 +19,14 @@ class BaseOptions():
 
         # 杂项
         parser.add_argument('--verbose', action='store_true', help='if specified, print more debugging information')
-        parser.add_argument('--gpu_ids', type=str, default='3', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
+        parser.add_argument('--gpu_ids', type=str, default='1,3', help='gpu ids: e.g. 0  0,1,2, 0,2. use -1 for CPU')
 
         # 数据相关： 数据路径、使用的datasets、装载数据的线程数、batch_sizes
         parser.add_argument('--dataroot', type=str, default='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/text_images/',
                             help='path to images')
         parser.add_argument('--dataset', type=str, default='tps_dataset', help='which customized dataset to use?')
         parser.add_argument('--num_threads', default=5, type=int, help='# threads for loading data')
-        parser.add_argument('--batch_size', default=5, type=int, help='batch size')
+        parser.add_argument('--batch_size', default=10, type=int, help='batch size')
 
         # 模型存储相关： 存储路径，多少epoch存储一次. 暂存为latest模型的时间
         parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
