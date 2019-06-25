@@ -240,7 +240,7 @@ class TPSDataset(data.Dataset):
             进行TPS形变
             """
             ran = random.random()
-            max_diverge = random.randint(5, 40)
+            max_diverge = random.randint(10, 40)
             is_up = random.choice([True, False])
             if ran < 0.3:
                 # 左侧

@@ -87,6 +87,7 @@ def random_crop(img, bboxs, size):
     bboxs_target = cal_bbox(x_min, y_min, x_max, y_max, bboxs)
     return img_croped, bboxs_target
 
+
 def create_heat_map_patch(xmin, ymin, xmax, ymax):
     """
     :param xmin: 除以4之后的小数点坐标
