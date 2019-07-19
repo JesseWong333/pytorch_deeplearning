@@ -25,6 +25,7 @@ class CentreLineLoss(nn.Module):
         :param y_pred:
         :return:
         """
+        y_pred = y_pred.permute(0, 2, 3, 1)
         batch_size, h, w, _ = y_true.shape
 
         labels = y_true[:, :, :, 0]

@@ -30,7 +30,7 @@ def get_norm_layer(norm_type='batch'):
     elif norm_type == 'instance':
         norm_layer = functools.partial(nn.InstanceNorm2d, affine=False, track_running_stats=True)
     elif norm_type == 'switchable':
-        from .switchable_norm import SwitchNorm2d
+        from models.modules.switchable_norm import SwitchNorm2d
         norm_layer = functools.partial(SwitchNorm2d)
     elif norm_type == 'none':
         norm_layer = None
