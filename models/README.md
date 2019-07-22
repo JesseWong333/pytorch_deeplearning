@@ -25,6 +25,8 @@ module为自定义的更小的模块，比如switch_norm层，自定义的一些
 
 ---- 注册到哪一个层级，要不我还是只注册到model这一个层级吧， 不同的模型参数不同呐。
 如果你想要只传入一个arg， 那么你自己的模型要变动.
-mmdetection 方法的做法是
+mmdetection 方法的做法似乎是
+写了一个循环：
+modules = [_build_module(cfg_, registry, default_args) for cfg_ in cfg]s
 
 
