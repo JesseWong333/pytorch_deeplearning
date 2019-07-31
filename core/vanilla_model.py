@@ -4,37 +4,33 @@
 
 import torch
 import itertools
-from ..losses import build_loss
+from core.losses import build_loss
 from .backbones import build_backbone
 from .base_model import BaseModel
+from . import register_model
 
 
+@register_model
 class VanillaModel(BaseModel):
     def name(self):
         return "VanillaModel"
 
-    @staticmethod
-    def modify_commandline_options(parser, is_train=True):  # todo: 去gather不同option的做法。全部yaml文件
-        # called at model.__init__.py then at base_option.py gather_options
-        # 在这里写当前模型的参数, 参数函数全部用配置文件
-        return parser
-
-    def initialize(self, opt):
-        BaseModel.initialize(self, opt)
+    def initialize(self, args):
+        BaseModel.initialize(self, args)
         # 在这里初始化模型, 初始化optimizer,
         # 网络的train() 和 eval() 模式可以在这里切换
         self.loss_names = ['loss', ]  # 在这里指定需要打印的loss名字， 这个名字需要跟loss的属性名字完全一致
         self.model_names = ['net', ]  # 在这里指定网络模型的名字，这个对象的一个属性
-        self.net = build_backbone(opt)
+        self.net = build_backbone(args)
 
         # move net to GPU
         self.net.to(self.gpu_ids[0])
         self.net = torch.nn.DataParallel(self.net, self.gpu_ids)
 
         self.optimizer = torch.optim.Adam(itertools.chain(self.net.parameters()),
-                                                lr=opt.lr)
+                                          lr=args.lr)
 
-        self.criterion = build_loss(opt.loss)
+        self.criterion = build_loss(args.loss)
 
         # 会调用父类的setup方法为optimizers设置lr schedulers # todo: lr schedulers方法的抽象
         self.optimizers = []

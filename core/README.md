@@ -26,7 +26,13 @@ module为自定义的更小的模块，比如switch_norm层，自定义的一些
 ---- 注册到哪一个层级，要不我还是只注册到model这一个层级吧， 不同的模型参数不同呐。
 如果你想要只传入一个arg， 那么你自己的模型要变动.
 mmdetection 方法的做法似乎是
-写了一个循环：
-modules = [_build_module(cfg_, registry, default_args) for cfg_ in cfg]s
+自动将参数使用**进行拆包
 
 
+最终的设计就是，在model中完成模型的组装. 不特殊的就直接使用vanilla_model完成自动化组装。
+特殊的就自己定义model
+
+##如何打印loss, loss的加权
+
+打印所有的loss函数返回的. 在model中配置新的
+base_model中负责打印新的

@@ -4,6 +4,7 @@ import torch.utils.data as data
 import random
 import numpy as np
 import math
+from . import register_dataset
 
 
 label_prefix = 'labels'
@@ -125,18 +126,19 @@ def create_heat_map_patch(xmin, ymin, xmax, ymax):
     return np.tile(line_pach, (1, xmax))
 
 
+@register_dataset
 class ImageLine2Dataset(data.Dataset):
 
     @staticmethod
     def modify_commandline_options(parser, is_train):
         return parser
 
-    def __init__(self, opt):
+    def __init__(self, dataroot):
         super(ImageLine2Dataset, self).__init__()
-        self.opt = opt
+        self.dataroot = dataroot
         img_files = []
         exts = ['png', 'jpg', 'jpeg', 'JPG']
-        for parent, dirnames, filenames in os.walk(os.path.join(opt.dataroot, "images")):
+        for parent, dirnames, filenames in os.walk(os.path.join(self.dataroot, "images")):
             for filename in filenames:
                 for ext in exts:
                     if filename.endswith(ext):
@@ -158,7 +160,7 @@ class ImageLine2Dataset(data.Dataset):
 
             _, fn = os.path.split(im_fn)
             fn, _ = os.path.splitext(fn)
-            txt_fn = os.path.join(self.opt.dataroot, label_prefix, fn + '.txt')
+            txt_fn = os.path.join(self.dataroot, label_prefix, fn + '.txt')
             if not os.path.exists(txt_fn):
                 # print("Ground truth for image {} not exist!".format(im_fn))
                 index = random.randint(0, len(self.img_files) - 1)

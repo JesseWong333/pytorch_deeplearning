@@ -1,29 +1,22 @@
 import os
 import torch
 from collections import OrderedDict
-from . import networks
+from .modules import get_scheduler
 
 
 class BaseModel():
 
-    # modify parser to add command line options,
-    # and also change the default values if needed
-    @staticmethod
-    def modify_commandline_options(parser, is_train):
-        return parser
-
     def name(self):
         return 'BaseModel'
 
-    def initialize(self, opt):
-        self.opt = opt
-        self.gpu_ids = opt.gpu_ids
-        self.isTrain = opt.isTrain
-        self.device = torch.device('cuda:{}'.format(self.gpu_ids[0])) if self.gpu_ids else torch.device('cpu')
-        self.save_dir = os.path.join(opt.checkpoints_dir, opt.name)
+    def initialize(self, args):
+        self.device = torch.device('cuda:{}'.format(args.gpu_ids[0])) if args.gpu_ids else torch.device('cpu')
+        self.save_dir = os.path.join(args.checkpoints_dir, args.name)
         self.loss_names = []
         self.model_names = []
-        self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
+        if not os.path.exists(self.save_dir):
+            os.makedirs(self.save_dir)
+        # self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
         # self.visual_names = []
         # self.image_paths = []
 
@@ -34,15 +27,14 @@ class BaseModel():
         pass
 
     # load and print networks; create schedulers
-    def setup(self, opt, parser=None):
-        if self.isTrain:
-            self.schedulers = [networks.get_scheduler(optimizer, opt) for optimizer in self.optimizers]
+    def setup(self, args):
+        if args.isTrain:
+            self.schedulers = [get_scheduler(optimizer, args) for optimizer in self.optimizers]
+        if not args.isTrain or args.continue_train:
+            self.load_networks(args.epoch)
+        self.print_networks(args.verbose)
 
-        if not self.isTrain or opt.continue_train:
-            self.load_networks(opt.epoch)
-        self.print_networks(opt.verbose)
-
-    # make models eval mode during test time
+    # make core eval mode during test time
     def eval(self):
         for name in self.model_names:
             if isinstance(name, str):
@@ -71,6 +63,10 @@ class BaseModel():
         for name in self.loss_names:
             if isinstance(name, str):
                 # float(...) works for both scalar tensor and float number
+                values = getattr(self, name)
+                if isinstance(values, tuple) or isinstance(values, list):
+                    for loss_name, error in zip(values, self.arg.loss_names):
+                        errors_ret[loss_name] = float(error)
                 errors_ret[name] = float(getattr(self, name))
         return errors_ret
 
@@ -86,7 +82,7 @@ class BaseModel():
         # with open(self.log_name, "a") as log_file:
         #     log_file.write('%s\n' % message)
 
-    # save models to the disk
+    # save core to the disk
     def save_networks(self, epoch):
         for name in self.model_names:
             if isinstance(name, str):
@@ -100,7 +96,7 @@ class BaseModel():
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
 
-    # load models from the disk
+    # load core from the disk
     def load_networks(self, epoch):
         for name in self.model_names:
             if isinstance(name, str):

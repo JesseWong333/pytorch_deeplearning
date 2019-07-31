@@ -1,8 +1,7 @@
 import argparse
-import os
 import torch
-import models
-import data
+import core
+from core import data
 
 
 class BaseOptions():
@@ -12,7 +11,7 @@ class BaseOptions():
     def initialize(self, parser):
         # 实验的基本配置：名字，使用的模型, 训阶段
         parser.add_argument('--name', type=str, default='skew_model',
-                            help='name of the experiment. It decides where to store samples and models')
+                            help='name of the experiment. It decides where to store samples and core')
         parser.add_argument('--model', type=str, default='skew',
                             help='chooses which model to use.')
         parser.add_argument('--phase', type=str, default='train', help='train, val, test, etc')
@@ -29,7 +28,7 @@ class BaseOptions():
         parser.add_argument('--batch_size', default=10, type=int, help='batch size')
 
         # 模型存储相关： 存储路径，多少epoch存储一次. 暂存为latest模型的时间
-        parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='models are saved here')
+        parser.add_argument('--checkpoints_dir', type=str, default='./checkpoints', help='core are saved here')
         parser.add_argument('--save_epoch_freq', type=int, default=5,
                             help='frequency of saving checkpoints at the end of epochs')
         parser.add_argument('--save_latest_freq', type=int, default=5000,
@@ -86,7 +85,7 @@ class BaseOptions():
 
         # modify model-related parser options
         model_name = opt.model
-        model_option_setter = models.get_option_setter(model_name)
+        model_option_setter = core.get_option_setter(model_name)
         parser = model_option_setter(parser, self.isTrain)
         opt, _ = parser.parse_known_args()  # parse again with the new defaults
 

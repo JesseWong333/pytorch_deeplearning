@@ -7,7 +7,7 @@ import torch
 import numpy as np
 import torch.nn.functional as F
 from utils.tps_grid_gen import TPSGridGen
-from models.networks import VGGSkew
+from core.networks import VGGSkew
 
 
 def img_generator(folder):

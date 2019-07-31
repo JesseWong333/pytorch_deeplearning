@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.special import softmax
-from losses.prior_box_eval import PriorBoxEval
+from prior_box_eval import PriorBoxEval
 from detection_layer import DetectHead, DetectTail
 from utils.nms_wrapper import nms
 

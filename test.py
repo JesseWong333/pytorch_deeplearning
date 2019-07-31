@@ -10,7 +10,7 @@ from options.base_options import BaseOptions
 import cv2
 import numpy as np
 import torch
-from models import create_model
+from core import create_model
 from utils.preprocess_util import correct_image
 
 

@@ -1,8 +1,10 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from . import register_loss
 
 
+@register_loss
 class CentreLineLoss(nn.Module):
     """
     预测中心线， 并且在中心线上回归

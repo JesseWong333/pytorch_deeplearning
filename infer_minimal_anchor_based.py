@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from post_process import post_process
 from utils.preprocess_util import correct_image
-from models.networks import VGGRFBNet
+from core.networks import VGGRFBNet
 
 
 def img_generator(folder):

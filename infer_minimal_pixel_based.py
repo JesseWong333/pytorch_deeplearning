@@ -7,7 +7,7 @@ import torch
 import numpy as np
 from utils.preprocess_util import correct_image
 from post_process.centre_line_process import process
-from models.networks import VGGPixel
+from core.networks import VGGPixel
 
 
 def process_bboxes(bboxes, h, w, slide_thresh=0.3):
