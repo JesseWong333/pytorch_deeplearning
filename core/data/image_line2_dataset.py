@@ -6,7 +6,7 @@ import numpy as np
 import math
 from . import register_dataset
 
-
+# 在image_line_dataset 上做了一些修改
 label_prefix = 'labels'
 
 
@@ -129,16 +129,12 @@ def create_heat_map_patch(xmin, ymin, xmax, ymax):
 @register_dataset
 class ImageLine2Dataset(data.Dataset):
 
-    @staticmethod
-    def modify_commandline_options(parser, is_train):
-        return parser
-
     def __init__(self, dataroot):
         super(ImageLine2Dataset, self).__init__()
         self.dataroot = dataroot
         img_files = []
         exts = ['png', 'jpg', 'jpeg', 'JPG']
-        for parent, dirnames, filenames in os.walk(os.path.join(self.dataroot, "images")):
+        for parent, dirnames, filenames in os.walk(os.path.join(dataroot, "images")):
             for filename in filenames:
                 for ext in exts:
                     if filename.endswith(ext):
@@ -193,7 +189,7 @@ class ImageLine2Dataset(data.Dataset):
 
             # 创建对应的heat map作为label, 1/4 map_size
             factor = 4.0
-            heat_map = np.zeros(( int(croped_size[1] // factor), int(croped_size[0] // factor), 3), dtype=float)
+            heat_map = np.zeros((int(croped_size[1] // factor), int(croped_size[0] // factor), 3), dtype=float)
             for bbox in bboxes_target:
                 bbox_4 = [int(cond / factor) for cond in bbox]
                 xmin, ymin, xmax, ymax = bbox_4  # 缩放到1/4之后的坐标

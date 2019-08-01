@@ -10,6 +10,7 @@ class BaseModel():
         return 'BaseModel'
 
     def initialize(self, args):
+        self.args = args
         self.device = torch.device('cuda:{}'.format(args.gpu_ids[0])) if args.gpu_ids else torch.device('cpu')
         self.save_dir = os.path.join(args.checkpoints_dir, args.name)
         self.loss_names = []
@@ -65,9 +66,10 @@ class BaseModel():
                 # float(...) works for both scalar tensor and float number
                 values = getattr(self, name)
                 if isinstance(values, tuple) or isinstance(values, list):
-                    for loss_name, error in zip(values, self.arg.loss_names):
+                    for error, loss_name in zip(values, self.args.loss_names):
                         errors_ret[loss_name] = float(error)
-                errors_ret[name] = float(getattr(self, name))
+                else:
+                    errors_ret[name] = float(getattr(self, name))
         return errors_ret
 
     # 原来是将打印的信息放到专门的visualizer， 这里集成到了model中

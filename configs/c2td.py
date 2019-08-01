@@ -3,7 +3,7 @@
 # @Time 2019/7/30
 
 config = dict(
-    model='C2TDModel',
+    model='VanillaModel',
     backbone=dict(
         type='VGGPixel',  # The name of the class
         in_channels=3,
@@ -18,7 +18,7 @@ config = dict(
     ),
     dataset=dict(
         type='ImageLine2Dataset',
-        dataroot='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/text_images/'
+        dataroot='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
     ),
 
     isTrain=True,
@@ -29,7 +29,7 @@ config = dict(
     loss_ratios=[1, 0.1],
     loss_names=['heatmap_loss', 'location_loss'],  # the alias of the losses
 
-    batch_size=10,
+    batch_size=2,
     num_threads=5,
     gpu_ids=[1],
 
@@ -44,5 +44,8 @@ config = dict(
     continue_train=False,
     continue_model='',
 
-    verbose=True
+    verbose=False,
+    print_freq=100,
+    save_latest_freq=5000,
+    save_epoch_freq=5
 )
