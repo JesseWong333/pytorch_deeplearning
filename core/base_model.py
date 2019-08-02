@@ -12,14 +12,13 @@ class BaseModel():
     def initialize(self, args):
         self.args = args
         self.device = torch.device('cuda:{}'.format(args.gpu_ids[0])) if args.gpu_ids else torch.device('cpu')
-        self.save_dir = os.path.join(args.checkpoints_dir, args.name)
         self.loss_names = []
         self.model_names = []
-        if not os.path.exists(self.save_dir):
-            os.makedirs(self.save_dir)
-        # self.log_name = os.path.join(opt.checkpoints_dir, opt.name, 'loss_log.txt')
-        # self.visual_names = []
-        # self.image_paths = []
+        if args.isTrain:
+            self.save_dir = os.path.join(args.checkpoints_dir, args.name)
+            if not os.path.exists(self.save_dir):
+                os.makedirs(self.save_dir)
+        self.output_names = []
 
     def set_input(self, input):
         self.input = input
@@ -32,7 +31,10 @@ class BaseModel():
         if args.isTrain:
             self.schedulers = [get_scheduler(optimizer, args) for optimizer in self.optimizers]
         if not args.isTrain or args.continue_train:
-            self.load_networks(args.epoch)
+            if isinstance(args.load_models, int):  # 如果是一个数值，就寻找原路径按照epoch
+                self.load_networks_epoch(args.load_models)
+            if isinstance(args.load_models, list):  # 如果是一个路径list(可能包含多个模型)，就按照实际去load
+                self.load_neteorks_list(args.load_models)
         self.print_networks(args.verbose)
 
     # make core eval mode during test time
@@ -57,6 +59,13 @@ class BaseModel():
             scheduler.step()
         lr = self.optimizers[0].param_groups[0]['lr']
         print('learning rate = %.7f' % lr)
+
+    def get_current_visuals(self):
+        visual_ret = []
+        for name in self.output_names:
+            if isinstance(name, str):
+                visual_ret.append(getattr(self, name))
+        return visual_ret
 
     # return traning losses/errors. train.py will print out these errors as debugging information
     def get_current_losses(self):
@@ -98,26 +107,59 @@ class BaseModel():
                 else:
                     torch.save(net.cpu().state_dict(), save_path)
 
-    # load core from the disk
-    def load_networks(self, epoch):
-        for name in self.model_names:
-            if isinstance(name, str):
-                load_filename = '%s_net_%s.pth' % (epoch, name)
-                load_path = os.path.join(self.save_dir, load_filename)
-                net = getattr(self, name)
-                if isinstance(net, torch.nn.DataParallel):
-                    net = net.module
-                print('loading the model from %s' % load_path)
-                # if you are using PyTorch newer than 0.4 (e.g., built from
-                # GitHub source), you can remove str() on self.device
-                state_dict = torch.load(load_path, map_location=str(self.device))
-                if hasattr(state_dict, '_metadata'):
-                    del state_dict._metadata
+    def load_networks(self, name, load_path):
+        net = getattr(self, name)
+        if isinstance(net, torch.nn.DataParallel):
+            net = net.module
+        print('loading the model from %s' % load_path)
+        # if you are using PyTorch newer than 0.4 (e.g., built from
+        # GitHub source), you can remove str() on self.device
+        state_dict = torch.load(load_path, map_location=str(self.device))
+        # if hasattr(state_dict, '_metadata'):
+        #     del state_dict._metadata
+        #
+        # # patch InstanceNorm checkpoints prior to 0.4
+        # for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
+        #     self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
+        net.load_state_dict(self.remove_moudle(state_dict))
 
-                # patch InstanceNorm checkpoints prior to 0.4
-                for key in list(state_dict.keys()):  # need to copy keys here because we mutate in loop
-                    self.__patch_instance_norm_state_dict(state_dict, net, key.split('.'))
-                net.load_state_dict(state_dict)
+    @staticmethod
+    def remove_moudle(state_dict):
+        """本例子中的在存储网络的时候已经全部去掉了module开始的，为了兼容其他的，加上判断"""
+        new_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            head = k[:7]
+            if head == 'module.':
+                name = k[7:]
+            else:
+                name = k
+            # print(name)
+            new_state_dict[name] = v
+        return new_state_dict
+
+    # 去掉了Instance Norm中的参数，有现在已经没有这个必要了吧?
+    def __patch_instance_norm_state_dict(self, state_dict, module, keys, i=0):
+        key = keys[i]
+        if i + 1 == len(keys):  # at the end, pointing to a parameter/buffer
+            if module.__class__.__name__.startswith('InstanceNorm') and \
+                    (key == 'running_mean' or key == 'running_var'):
+                if getattr(module, key) is None:
+                    state_dict.pop('.'.join(keys))
+            if module.__class__.__name__.startswith('InstanceNorm') and \
+               (key == 'num_batches_tracked'):
+                state_dict.pop('.'.join(keys))
+        else:
+            self.__patch_instance_norm_state_dict(state_dict, getattr(module, key), keys, i + 1)
+
+    def load_neteorks_list(self, paths):
+        for name, path in zip(self.model_names, paths):
+            self.load_networks(name, path)
+
+    def load_networks_epoch(self, epoch):
+        for name in self.model_names:
+            load_filename = '%s_net_%s.pth' % (epoch, name)
+            load_path = os.path.join(self.save_dir, load_filename)
+            self.load_networks(name, load_path)
 
     # print network information
     def print_networks(self, verbose):

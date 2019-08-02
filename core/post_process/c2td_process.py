@@ -6,6 +6,7 @@ import cv2
 import numpy as np
 import os
 from PIL import Image, ImageDraw
+from . import register_post_process
 
 
 def draw_activate(im, activation_pixels, file_name, pixel_size=4, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
@@ -29,12 +30,14 @@ def contour_filter(x):
     return isnoise
 
 
-def process(out, img, file_name, thresh=0.8, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
+@register_post_process
+def c2td_process_horizon(outputs, img, file_name=None, thresh=0.8, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
     """
 
-    :param out: 1*3*h*w
+    :param outputs: the output values from model. A dict.
     :return:
     """
+    out = outputs[0]  # 重构得不好，为什么单独写'pred'
     out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
     scores = out[:, :, 0]
 
@@ -46,9 +49,9 @@ def process(out, img, file_name, thresh=0.8, save_path='/media/Data/wangjunjie_c
     scores = scores*255
 
     # todo: 调试代码： 可视化激活
-    cond = np.greater_equal(scores, 255*thresh)
-    activation_pixels = np.where(cond)
-    draw_activate(Image.fromarray(img), activation_pixels, file_name)
+    # cond = np.greater_equal(scores, 255*thresh)
+    # activation_pixels = np.where(cond)
+    # draw_activate(Image.fromarray(img), activation_pixels, file_name)
 
     # 或者这里可以先计算图片的梯度
     # _, bin = cv2.threshold(scores, 125, 255, cv2.THRESH_BINARY)

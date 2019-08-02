@@ -1,8 +1,13 @@
 # Introduction
+Universal pytorch train & test framework, 
+which is developed for fast implementation, research and deploy 
 
 # Getting Started
 
-实现参照pytorch cycle-gan 项目
+实现参照
+- pytorch cycle-gan
+- fairseq
+- mmdetection
 
 # This project is still under development
 Now including 2 text detection methods
