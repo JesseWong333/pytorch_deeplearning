@@ -26,20 +26,25 @@ class InferModel:
         self.model.eval()
         self.post_process = build_post_process(args.post_process)
 
-    def infer(self, src):
+    def expand_img(self, src):
         # todo: magic number
+        # 与此同时，需要将原始的图片传出以供后处理
         if isinstance(src, np.ndarray):
             if len(src.shape) == 2:
                 # 灰度图
-                src_ori = src[:, :, np.newaxis]
-            src = src_ori.transpose((2, 0, 1)).astype(np.float32)  # 通道前置
+                src = src[:, :, np.newaxis]
+            src = src.transpose((2, 0, 1)).astype(np.float32)  # 通道前置
             src = torch.from_numpy(src)
         if len(src.shape) == 3:
             src = src.unsqueeze(dim=0)
         assert len(src.shape) == 4
-        self.model.set_input(src)
+        return src
+
+    def infer(self, src):
+        src_t = self.expand_img(src)
+        self.model.set_input(src_t)
         self.model.test()
         out_dict = self.model.get_current_visuals()  # 可以有多个输出，比如attention的中间结果都可以输出
-        return self.post_process(out_dict, src_ori)  # 后处理会有用到原始的图片吗？其实用不到，但是在调试过程中可能用到. 先也传入
+        return self.post_process(out_dict, src)  # 后处理会有用到原始的图片吗？其实用不到，但是在调试过程中可能用到. 先也传入. 可能比如C2TD的校正
 
 

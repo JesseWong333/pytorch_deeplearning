@@ -30,6 +30,23 @@ def contour_filter(x):
     return isnoise
 
 
+def crop(img, bboxes):
+    """
+
+    :param img: 3通道的图片
+    :param bboxes:
+    :return:
+    """
+    h, w, _ = img.shape
+    bboxes = [(max(0, bbox[0]), max(0, bbox[1] - 4), min(w, bbox[2]), min(h, bbox[3] + 4)) for bbox in bboxes]
+    bboxes = [tuple(map(int, bbox)) for bbox in bboxes]
+    img_patches = []
+    for bbox in bboxes:
+        img_patch = img[bbox[1]:bbox[3]+1, bbox[0]:bbox[2]+1, :]
+        img_patches.append(img_patch)
+    return img_patches
+
+
 @register_post_process
 def c2td_process_horizon(outputs, img, file_name=None, thresh=0.8, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
     """
@@ -111,10 +128,10 @@ def c2td_process_horizon(outputs, img, file_name=None, thresh=0.8, save_path='/m
             cords.append((xmin, ave_top, xmax, ave_down))
 
     # 滤除噪音
-    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 2, cords))
+    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 1.8, cords))
 
 
     # todo 调试代码
     # cv2.imwrite(os.path.join(save_path, file_name + '_rectangle.png'), img_rectangle)
-
-    return cords
+    img_patches = crop(img, cords)
+    return img_patches
