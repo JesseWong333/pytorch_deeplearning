@@ -2,6 +2,7 @@ import os
 import torch
 from collections import OrderedDict
 from .modules import get_scheduler
+from .modules import init_weights
 
 
 class BaseModel():
@@ -35,6 +36,12 @@ class BaseModel():
                 self.load_networks_epoch(args.load_models)
             if isinstance(args.load_models, list):  # 如果是一个路径list(可能包含多个模型)，就按照实际去load
                 self.load_neteorks_list(args.load_models)
+        else:
+            # init network
+            for name in self.model_names:
+                if isinstance(name, str):
+                    net = getattr(self, name)
+                    init_weights(net, args.init_type)
         self.print_networks(args.verbose)
 
     # make core eval mode during test time
