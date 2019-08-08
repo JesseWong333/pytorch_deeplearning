@@ -6,5 +6,7 @@
 *.log
 *.tmp
 *tmp*
-*idea
+
+# JetBrains PyCharm IDE
+.idea/
 

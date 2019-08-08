@@ -2,7 +2,7 @@
 
 # Copyright (c) 2019-present, AI
 # All rights reserved.
-# @Time 2019/8/1
+# @Time 2019/8/6
 
 
 '''
@@ -19,10 +19,10 @@
 config = dict(
     model='VanillaModel',
     backbone=dict(
-        type='CRNN',
+        type='GRCNN',
         imgH=32,
         nc=1,
-        nclass=6725,  # 具体的类别数通过代码中获取字典再设置
+        nclass=6595,  # 具体的类别数通过代码中获取字典再设置
         nh=256
     ),
     # loss=dict(
@@ -37,7 +37,7 @@ config = dict(
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='ctc_decoder',
-        convert_list_path='/media/Data/wangjunjie_code/pytorch_text_detection/files/char_std_print_6725.txt'
+        convert_list_path='/media/Data/wangjunjie_code/pytorch_text_detection/files/char_std_xunfei_6595.txt'
     ),
 
     isTrain=True,
@@ -63,7 +63,7 @@ config = dict(
     # parameters of continuing to train the model
     # epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     # continue_train=False,
-    load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/files/netCRNN_1_66000_2-1_new.pth'],
+    load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/files/netGRCNN_6_7000.pth'],
 
     verbose=False,
     # print_freq=100,

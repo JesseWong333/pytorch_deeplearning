@@ -2,3 +2,4 @@
 from .norm import get_norm_layer
 from .basic_module import BasicRFB_a, BidirectionalLSTM, BasicConv
 from .scheduler import get_scheduler
+from .initializer import init_weights

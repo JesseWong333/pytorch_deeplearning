@@ -22,7 +22,7 @@ config = dict(
     ),
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
-        type='c2td_process_horizon'
+        type='c2td_process'
     ),
 
     isTrain=True,
@@ -35,7 +35,7 @@ config = dict(
 
     batch_size=2,
     num_threads=5,
-    gpu_ids=[3],
+    gpu_ids=[2],
 
     # parameters of lr scheduler.
     lr=0.001,
@@ -43,10 +43,14 @@ config = dict(
     epoch=80,  # 总的训练的epoch
     scheduler_param=[50, 30],  # 前50个epoch适用lr, 再经过30 epoch 线性减为0
 
+    init_type='xavier',
+
+
     # parameters of continuing to train the model
     epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     continue_train=False,
     load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/checkpoints/pixel_based_TPS_OHEM/60_net_net.pth'],
+    # load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/checkpoints/pixel_based_TPS_OHEM_weighted/60_net_net.pth'],
 
     verbose=False,
     print_freq=100,
