@@ -35,7 +35,7 @@ config = dict(
 
     batch_size=2,
     num_threads=5,
-    gpu_ids=[2],
+    gpu_ids=[3],
 
     # parameters of lr scheduler.
     lr=0.001,

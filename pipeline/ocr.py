@@ -108,11 +108,12 @@ if __name__ == '__main__':
 
     pipeline = PipeLine()
 
-    img_base_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/'
+    # img_base_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/'
+    img_base_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/all-images/'
     save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo_results'
 
     font_ttf = "STKAITI.TTF"  # 可视化字体类型
-    font = ImageFont.truetype(font_ttf, 24)  # 字体与字体大小
+    font = ImageFont.truetype(font_ttf, 32)  # 字体与字体大小
 
     for img, file_name in tqdm(img_generator(img_base_path)):
         bounding_boxes, texts, img_patches = pipeline.infer(img)
