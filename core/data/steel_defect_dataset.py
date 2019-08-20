@@ -6,57 +6,60 @@ import numpy as np
 import torch
 import math
 from torchvision import transforms
+import pandas as pd
 
 
 class SteelDefectDataset(data.Dataset):
 
     def __init__(self, csv_file, floder):
         super(SteelDefectDataset, self).__init__()
-        with open(csv_file, 'r', encoding='utf-8') as f:
-            f.readline()
-            self.lines = f.readlines()
+        self.train_df = pd.read_csv(csv_file)
+
         self.floder = floder
         self.transfrom = transforms.Compose([
             transforms.ToTensor(),
             ])
 
-    def __len__(self):
-        return len(self.lines)
+    # https://www.kaggle.com/go1dfish/clear-mask-visualization-and-simple-eda
+    def name_and_mask(self, start_idx):
+        col = start_idx
+        img_names = [str(i).split("_")[0] for i in self.train_df.iloc[col:col+4, 0].values]
+        if not (img_names[0] == img_names[1] == img_names[2] == img_names[3]):
+            raise ValueError
 
-    def create_heatmap(self):
-        pass
+        labels = self.train_df.iloc[col:col+4, 1]
+        mask = np.zeros((256, 1600, 4), dtype=np.uint8)
+
+        for idx, label in enumerate(labels.values):
+            if label is not np.nan:
+                mask_label = np.zeros(1600*256, dtype=np.uint8)
+                label = label.split(" ")
+                positions = map(int, label[0::2])
+                length = map(int, label[1::2])
+                for pos, le in zip(positions, length):
+                    mask_label[pos:(pos+le)] = 1
+                mask[:, :, idx] = mask_label.reshape(256, 1600, order='F')
+        return img_names[0], mask
+
+    def __len__(self):
+        return self.train_df.shape[0]//4
 
     def __getitem__(self, index):
-        index_r = index // 2
-        image_o = index % 2
-        if image_o == 0:
-            ordinal = 's1'
-        else:
-            ordinal = 's2'
-        line_info = self.lines[index_r].strip().split(',')
-
-        img_path = os.path.join(self.img_base_path, line_info[1], 'Plate' + line_info[2],
-                                line_info[3] + '_' + ordinal + '_')
-        images_channel = []
-        for i in range(1, 6 + 1):
-            img_path_channel = img_path + 'w' + str(i) + '.png'
-            img = cv2.imread(img_path_channel, -1)
-            images_channel.append(img[:, :, np.newaxis])
-
-        img = np.concatenate(images_channel, axis=2)
-        img = self.transfrom(img)
-
-        label = int(line_info[4])
-        return img, torch.tensor(label)
+        col = index * 4
+        img_name, mask = self.name_and_mask(col)
+        img = cv2.imread(os.path.join(self.floder, img_name), -1)
+        return img, mask
 
     @staticmethod
     def collate_fn(batch):
         imgs = []
         targets = []
         for img, target in batch:
-            imgs.append(img.unsqueeze(dim=0))
-            targets.append(target.unsqueeze(dim=0))
-        return torch.cat(imgs, 0), torch.cat(targets, 0)
+            img = img.transpose((2, 0, 1))  # 通道前置
+            imgs.append(img[np.newaxis, :, :, :])
+            target = target.transpose((2, 0, 1))
+            targets.append(target[np.newaxis, :, :, :])
+        return np.concatenate(imgs, 0), np.concatenate(targets, 0)
 
 
 if __name__ == '__main__':
@@ -65,24 +68,14 @@ if __name__ == '__main__':
     np.random.seed(0)
     torch.manual_seed(0)
 
-    save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/visualise'
-
-    class Opt():
-        dataroot = '/media/Data/open_images_datasets/recursion-cellular-image-classification/train.csv'
-    opt = Opt()
-
+    csv_file = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/severstal-steel-defect-detection/train.csv'
+    folder = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/severstal-steel-defect-detection/train_images'
     data_loader = torch.utils.data.DataLoader(
-        KaggleDataset(opt), shuffle=True, batch_size=4, num_workers=4,
-        collate_fn=KaggleDataset.collate_fn)
+        SteelDefectDataset(csv_file, folder), shuffle=True, batch_size=4, num_workers=4,
+        collate_fn=SteelDefectDataset.collate_fn)
     # 注意这样得到的通道数在最后，默认的
     start_time = time.time()
     for ii, (image, label) in enumerate(data_loader):
-        # image = np.squeeze(image, axis=0)
-        # image = image.transpose((1, 2, 0))
-        # new_im = image.copy()
-        # new_im = new_im.astype(np.uint8)
-        # print(image[0,0,0,0].numpy())
-        # print(label[0].numpy())
         print(ii)
         if ii == 500:
             print(time.time() - start_time)
