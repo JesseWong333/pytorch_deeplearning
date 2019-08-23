@@ -7,15 +7,17 @@ import torch
 import math
 from torchvision import transforms
 import pandas as pd
+from . import register_dataset
 
 
+@register_dataset
 class SteelDefectDataset(data.Dataset):
 
-    def __init__(self, csv_file, floder):
+    def __init__(self, csv_file, folder):
         super(SteelDefectDataset, self).__init__()
         self.train_df = pd.read_csv(csv_file)
 
-        self.floder = floder
+        self.folder = folder
         self.transfrom = transforms.Compose([
             transforms.ToTensor(),
             ])
@@ -47,7 +49,7 @@ class SteelDefectDataset(data.Dataset):
     def __getitem__(self, index):
         col = index * 4
         img_name, mask = self.name_and_mask(col)
-        img = cv2.imread(os.path.join(self.floder, img_name), -1)
+        img = cv2.imread(os.path.join(self.folder, img_name), -1)
         return img, mask
 
     @staticmethod
