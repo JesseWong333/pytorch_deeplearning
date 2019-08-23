@@ -2,9 +2,10 @@ import time
 from core.data import build_dataset
 from core import build_model
 from configs.config_util import ConfigDict
-from configs.c2td import config
+from configs.segmentation_unet import config  # todo argparse指定配置文件
 
 if __name__ == '__main__':
+
     args = ConfigDict(config)  # config file从文件读入
     data_loader = build_dataset(args)
     dataset_size = len(data_loader)

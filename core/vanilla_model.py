@@ -47,7 +47,7 @@ class VanillaModel(BaseModel):
 
     def backward(self):
         self.losses = self.criterion(self.target, self.pred)
-        if len(self.losses) <= 1:
+        if not isinstance(self.losses, tuple):
             self.total_loss = self.losses
         else:
             self.total_loss = 0.

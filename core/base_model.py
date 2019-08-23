@@ -15,8 +15,9 @@ class BaseModel():
         self.device = torch.device('cuda:{}'.format(args.gpu_ids[0])) if args.gpu_ids else torch.device('cpu')
         self.loss_names = []
         self.model_names = []
+        self.gpu_ids = args.gpu_ids
+        self.save_dir = os.path.join(args.checkpoints_dir, args.name)
         if args.isTrain:
-            self.save_dir = os.path.join(args.checkpoints_dir, args.name)
             if not os.path.exists(self.save_dir):
                 os.makedirs(self.save_dir)
         self.output_names = []
