@@ -41,6 +41,22 @@ class SteelDefectDataset(data.Dataset):
                 for pos, le in zip(positions, length):
                     mask_label[pos:(pos+le)] = 1
                 mask[:, :, idx] = mask_label.reshape(256, 1600, order='F')
+
+        # 已知是没有重叠的
+        # 第0维，是空白的维度.
+        mask_blank = np.ones((256, 1600), dtype=np.uint8)
+        for i in range(4):
+            mask_blank = mask_blank - mask[:, :, i]
+        mask_blank[mask_blank < 0] = 0
+        mask = np.concatenate((mask_blank[:, :, np.newaxis], mask), 2)
+
+        # 合并，转换为一个map， 使用标签[0, 4]
+        for i in range(5):
+            mask[mask[:, :, i] == 1, i] = i
+
+        mask_class = np.zeros((256, 1600), dtype=np.uint8)
+        for i in range(5):
+            mask_class += mask[:, :, i]
         return img_names[0], mask
 
     def __len__(self):

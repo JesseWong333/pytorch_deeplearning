@@ -26,7 +26,7 @@ def convert_to_numpy(img_t):
 
 
 @register_post_process
-def convert_seg_to_encoded_pixels(img_t, src, thresh=0.5):
+def convert_seg_to_encoded_pixels(img_t, src, thresh=0.9):
     """
     convert multiple segmentation map to encoded pixels. 4 channel
     """
@@ -38,11 +38,22 @@ def convert_seg_to_encoded_pixels(img_t, src, thresh=0.5):
     img[img >= thresh] = 1.
     img[img < thresh] = 0.
     img = img * 255
-    for channle in range(4):
-        _, bin = cv2.threshold(img[:, :, channle], 255 * thresh, 255, cv2.THRESH_BINARY)
+    h, w, _ = img.shape
+    encoded_pixels = [[], [], [], []]
+    for channel in range(4):
+        _, bin = cv2.threshold(img[:, :, channel], 255 * thresh, 255, cv2.THRESH_BINARY)
         contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
         for cnt in contours:
             cnt = np.squeeze(cnt, axis=1)
-            pass
-    pass
+            sorted_cnt = cnt[np.lexsort(cnt[:, ::-1].T)]  # 应该是先按照x排序好， x相同的再按照y排序好
+            start_x = sorted_cnt[0, 0]
+            start_index = 0
+            for i in range(1, sorted_cnt.shape[0]):
+                if sorted_cnt[i, 0] != start_x:
+                    number_pixels = sorted_cnt[i-1, 1] - sorted_cnt[start_index, 1] + 1
+                    encoded_pixels[channel].append(h*start_x+sorted_cnt[start_index, 1])
+                    encoded_pixels[channel].append(number_pixels)
 
+                    start_x = sorted_cnt[i, 0]
+                    start_index = i
+    return encoded_pixels
