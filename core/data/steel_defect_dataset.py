@@ -57,7 +57,7 @@ class SteelDefectDataset(data.Dataset):
         mask_class = np.zeros((256, 1600), dtype=np.uint8)
         for i in range(5):
             mask_class += mask[:, :, i]
-        return img_names[0], mask
+        return img_names[0], mask_class
 
     def __len__(self):
         return self.train_df.shape[0]//4
@@ -75,8 +75,8 @@ class SteelDefectDataset(data.Dataset):
         for img, target in batch:
             img = img.transpose((2, 0, 1))  # 通道前置
             imgs.append(img[np.newaxis, :, :, :])
-            target = target.transpose((2, 0, 1))
-            targets.append(target[np.newaxis, :, :, :])
+            # target = target.transpose((2, 0, 1))
+            targets.append(target[np.newaxis, :, :])
         return np.concatenate(imgs, 0), np.concatenate(targets, 0)
 
 

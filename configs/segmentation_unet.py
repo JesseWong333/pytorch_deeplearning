@@ -9,7 +9,7 @@ config = dict(
     backbone=dict(
         type='Unet',  # The name of the class
         input_nc=3,
-        output_nc=4,
+        output_nc=5,
         num_downs=5
     ),
     loss=dict(

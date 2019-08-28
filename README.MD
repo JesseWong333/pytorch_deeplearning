@@ -37,7 +37,8 @@ which is developed for fast implementation, research and deploy
 # This project is still under development.
 The interface is not stable.
 
-Now including 2 methods
-- C^2TD: a fast and robust text detector via centre line regression and centre border probability
-- CRNN: only inference
+Now including:
+- C^2TD: a fast and robust text detector via centre line regression and centre border probability[.config\c2td.py]
+- CRNN & GRCNN: only inference
+- Unet segmentation
 - To be continue: Transformers

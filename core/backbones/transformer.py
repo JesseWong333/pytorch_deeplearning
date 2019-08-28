@@ -9,7 +9,7 @@ import torch
 import math, copy, time
 import torch.nn as nn
 import torch.nn.functional as F
-from . import register_backbone
+# from . import register_backbone
 
 
 class Generator(nn.Module):
@@ -279,7 +279,7 @@ class EncoderDecoder(nn.Module):
         return self.decoder(self.tgt_embed(tgt), memory, src_mask, tgt_mask)
 
 
-@register_backbone
+# @register_backbone
 class TransformerS2S(nn.Module):
     """将原来的encoder-decoder类直接进行再封装"""
     def __init__(self, src_vocab, tgt_vocab, N=6,
