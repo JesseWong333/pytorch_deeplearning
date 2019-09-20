@@ -35,16 +35,19 @@ class InferModel:
                 src = src[:, :, np.newaxis]
             src = src.transpose((2, 0, 1)).astype(np.float32)  # 通道前置
             src = torch.from_numpy(src)
-        if len(src.shape) == 3:
-            src = src.unsqueeze(dim=0)
-        assert len(src.shape) == 4
+        if isinstance(src, torch.Tensor):
+            if len(src.shape) == 3:
+                src = src.unsqueeze(dim=0)
+            assert len(src.shape) == 4
         return src
 
-    def infer(self, src):
+    def infer(self, src, **args):
         src_t = self.expand_img(src)
         self.model.set_input(src_t)
         self.model.test()
         out_dict = self.model.get_current_visuals()  # 可以有多个输出，比如attention的中间结果都可以输出
-        return self.post_process(out_dict, src)  # 后处理会有用到原始的图片吗？其实用不到，但是在调试过程中可能用到. 先也传入. 可能比如C2TD的校正
+        # 后处理会有用到原始的图片吗？其实用不到，但是在调试过程中可能用到. 先也传入. 可能比如C2TD的校正.
+        # todo: 可以通过args不定长参数来处理
+        return self.post_process(out_dict, src, **args)
 
 

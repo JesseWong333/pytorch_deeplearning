@@ -1,6 +1,7 @@
 # Copyright (c) 2019-present, AI
 # All rights reserved.
 # @Time 2019/7/17
+# @ author: Jesse Wang
 
 import torch
 import torch.nn as nn
@@ -18,22 +19,31 @@ import functools
 # M: pooling为2的maxpooling, C pooling为1的maxpooling层， O 当层作为特征输出，传出这个索引
 # 论文中说O应该在conv层之后，pooling层之前，但是看一个实现却是取pooling层之后
 # 使用1/4的形式
+# M: pooling 层
+# O: endpoint
+# C: 自定义的层
+# 注意，在实现的过程中尽量保证兼容
+
 cfg = {
     'D': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'O',
-          'M', 512, 512, 512, 'O', 'M', 512, 512, 512, 'O', 'C', 1024, 1024, 'O'],  # VGG_16 with extra layers
+          'M', 512, 512, 512, 'O', 'M', 512, 512, 512, 'O', 'C', 1024, 1024, 'O'],  # VGG_feature_pyramid
+    'P': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'O',
+          'M', 512, 512, 512, 'O', 'M', 512, 512, 512, 'O', 'C', 'C', 'C', 'O'],  # VGG_feature_pyramid_Dilation
     'R': [64, 64, 'M', 128, 128, 'M', 256, 256, 256,
           'M', 512, 512, 512, 'M', 512, 512, 512],  # VGG_16 for RFB
     'S': [64, 'M', 128, 'M', 256, 'M', 512, 'M', 512, 'M', 512, 'M', 512, ],  # VGG with extra layers. 需要有6个pooling层
+
 }
 
 
-def make_layers(cfg, in_channels=3, channel_width = 1, norm_type='batch'):
+def make_layers(cfg, in_channels=3, channel_width = 1, norm_type='batch', custom_layer=None):
     """
 
     :param cfg:
     :param in_channels: 1 or 3
     :param channel_width: 方便快速减少通道数量
     :param norm_type:
+    :param custom_layer: 自定义的层， 以C表示
     :return:
     """
     norm_layer = get_norm_layer(norm_type)
@@ -43,7 +53,7 @@ def make_layers(cfg, in_channels=3, channel_width = 1, norm_type='batch'):
         if v == 'M':
             layers += [nn.MaxPool2d(kernel_size=2, stride=2)]
         elif v == 'C':
-            layers += [nn.MaxPool2d(kernel_size=3, stride=1, padding=1)]  # 按照原pixel link中的写法
+            layers += custom_layer.pop(0)  # 按照原pixel link中的写法
         elif v == 'O':
             endpoint_index.append(len(layers) - 1)  # 记住了是哪一层，但是没有记住通道数
         else:
@@ -75,7 +85,8 @@ def make_head(in_channel, out_channel):
 class VGGPixel(nn.Module):
     def __init__(self, in_channels=3, out_channel=6, channel_width=1, norm_type='batch'):
         super(VGGPixel, self).__init__()
-        layers, endpoint_index = make_layers(cfg['D'], in_channels, channel_width, norm_type)
+        c_layers = [[nn.MaxPool2d(kernel_size=3, stride=1, padding=1)]]
+        layers, endpoint_index = make_layers(cfg['D'], in_channels, channel_width, norm_type, c_layers)
         self.vgg = nn.ModuleList(layers)
         endpoint_channel = [256, 512, 512, 1024]  # 就是cfg配置文件前面的数值
         self.head = nn.ModuleList(make_head(endpoint_channel, out_channel))
@@ -96,6 +107,45 @@ class VGGPixel(nn.Module):
 
         # 将各个score upsample, 然后再进行合并. 使用点加的方式
         # 最后两个feature map大小是相等的
+
+        feature = score_maps[2] + score_maps[3]
+        for i in [1, 0]:
+            feature = F.interpolate(feature, None, 2, 'bilinear') + score_maps[i]
+        heat_map = self.score_head(feature)
+        return heat_map
+
+
+# VGG Pixel-link给出的结构，在一层有Dilation
+@register_backbone
+class VGGPixelWithDilation(nn.Module):
+    def __init__(self, in_channels=3, out_channel=6, channel_width=1, norm_type='batch'):
+        super(VGGPixelWithDilation, self).__init__()
+        c_layers = [[nn.MaxPool2d(kernel_size=3, stride=1, padding=1)],
+                    [nn.Conv2d(int(512*channel_width), int(1024*channel_width), kernel_size=3, padding=6, dilation=6),
+                     get_norm_layer(norm_type)(int(1024*channel_width)),
+                     nn.ReLU(inplace=True)
+                     ],
+                    [nn.Conv2d(int(1024*channel_width), int(1024*channel_width), kernel_size=3, padding=1),
+                     get_norm_layer(norm_type)(int(1024 * channel_width)),
+                     nn.ReLU(inplace=True)]
+                    ]
+        layers, endpoint_index = make_layers(cfg['P'], in_channels, channel_width, norm_type, c_layers)
+        self.vgg = nn.ModuleList(layers)
+        endpoint_channel = [256, 512, 512, 1024]  # 就是cfg配置文件前面的数值
+        self.head = nn.ModuleList(make_head(endpoint_channel, out_channel))
+        self.score_head = nn.Conv2d(out_channel, out_channel, kernel_size=3, padding=1)
+        self.endpoint_index = endpoint_index
+
+    def forward(self, x):
+        endpoint = []
+        for k in range(len(self.vgg)):
+            x = self.vgg[k](x)
+            if k in self.endpoint_index:
+                endpoint.append(x)
+
+        score_maps = []
+        for x, head in zip(endpoint, self.head):
+            score_maps.append(head(x))
 
         feature = score_maps[2] + score_maps[3]
         for i in [1, 0]:

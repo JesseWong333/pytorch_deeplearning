@@ -32,6 +32,7 @@ class BaseModel():
     def setup(self, args):
         if args.isTrain:
             self.schedulers = [get_scheduler(optimizer, args) for optimizer in self.optimizers]
+        self.print_networks(args.verbose)
         if not args.isTrain or args.continue_train:
             if isinstance(args.load_models, int):  # 如果是一个数值，就寻找原路径按照epoch
                 self.load_networks_epoch(args.load_models)
@@ -43,7 +44,6 @@ class BaseModel():
                 if isinstance(name, str):
                     net = getattr(self, name)
                     init_weights(net, args.init_type)
-        self.print_networks(args.verbose)
 
     # make core eval mode during test time
     def eval(self):
