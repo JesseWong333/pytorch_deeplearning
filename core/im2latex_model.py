@@ -114,7 +114,6 @@ class Im2LatexModel(BaseModel):
         return log_probs, attn
 
     def forward(self):
-        # 前向的写法， 可以写一些很复杂的前向途径, 比如多个模型组合，可以在这里自定义写一个前向传播
         if self.args.isTrain:
             self.logits, self.attn = self.net(self.batch_images, self.formulas, None)
         else:
