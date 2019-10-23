@@ -45,15 +45,32 @@ def process(pixel_pos_scores, link_pos_scores, img_shape, ratio, src_img_shape):
     cords *= 4
     cords /= ratio
     cords = cords.astype(np.int32)
+
     # copy_pixel_pos_scores = np.squeeze(pixel_pos_scores)
     # copy_pixel_pos_scores = np.where(copy_pixel_pos_scores > 0.5, 255, 0)
     # savepath = os.path.join(vis_path, file_name + '_scoremap.png')
     # cv2.imwrite(savepath, copy_pixel_pos_scores)
+
     if len(bboxes) > 0:
         cords[:, 0::2] = np.clip(cords[:, 0::2], 0, src_img_shape[1] - 1)
         cords[:, 1::2] = np.clip(cords[:, 1::2], 0, src_img_shape[0] - 1)
+        cords = bboxes_to_quard(cords)
+
     return cords
 
+
+def bboxes_to_quard(bboxes):
+    """
+    将4点坐标方框转换为左上、右下坐标方框
+    :param bboxes:
+    :return:
+    """
+    cords = np.ones((bboxes.shape[0], 4), dtype=int)
+    cords[:, 0] = bboxes[:, 0::2].min(axis=1)
+    cords[:, 1] = bboxes[:, 1::2].min(axis=1)
+    cords[:, 2] = bboxes[:, 0::2].max(axis=1)
+    cords[:, 3] = bboxes[:, 1::2].max(axis=1)
+    return cords
 
 def decode_batch(pixel_cls_scores, pixel_link_scores,
                  pixel_conf_threshold=None, link_conf_threshold=None):

@@ -296,7 +296,7 @@ def c2td_process(outputs, img, file_name=None, thresh=0.8, sample_ratio=1, save_
     # activation_pixels = np.where(cond)
     # draw_activate(Image.fromarray(img), activation_pixels, file_name)
     _, bin = cv2.threshold(scores, 255 * thresh, 255, cv2.THRESH_BINARY)
-    contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+    _,contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
     curved_boxes = []
     rectangle_boxes = []
     for cnt in contours:

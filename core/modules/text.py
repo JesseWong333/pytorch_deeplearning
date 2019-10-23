@@ -10,16 +10,16 @@ class Vocab(object):
         self.load_vocab()
 
     def load_vocab(self):
-        self.special_tokens = [self.config['unk'], self.config['pad'], self.config['init'], self.config['end']]
+        self.special_tokens = [self.config.unk, self.config.pad, self.config.init, self.config.end]
         # self.special_tokens = [self.config['unk'], self.config['pad'], self.config['end'], self.config['init']]
 
-        self.tok_to_id = load_tok_to_id( self.config['path_vocab'], self.special_tokens)
+        self.tok_to_id = load_tok_to_id(self.config.path_vocab, self.special_tokens)
         self.id_to_tok = {idx: tok for tok, idx in self.tok_to_id.items()}
         self.n_tok = len(self.tok_to_id)
-        self.id_pad = self.tok_to_id[self.config['pad']]
-        self.id_end = self.tok_to_id[self.config['end']]
-        self.id_unk = self.tok_to_id[self.config['unk']]
-        self.id_init = self.tok_to_id[self.config['init']]
+        self.id_pad = self.tok_to_id[self.config.pad]
+        self.id_end = self.tok_to_id[self.config.end]
+        self.id_unk = self.tok_to_id[self.config.unk]
+        self.id_init = self.tok_to_id[self.config.init]
         # with codecs.open("id_train.txt", "w", "utf-8") as f:
         #     for i in range(self.n_tok):
         #         f.write(str(i) + "\t" + str(self.id_to_tok[i]) + "\n")
@@ -83,7 +83,7 @@ def load_tok_to_id(filename, tokens=[]):
         tok_to_id[tok] = len(tok_to_id)
     special_tok_num = len(tok_to_id)
 
-    with open(filename) as f:
+    with open(filename, 'r', encoding='utf-8') as f:
         for idx, token in enumerate(f):
             token = token.strip()
             tok_to_id[token] = idx + special_tok_num

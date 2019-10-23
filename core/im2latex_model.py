@@ -14,7 +14,7 @@ from core.modules.text import Vocab
 from core.modules.beam_search import BeamSearch, GNMTGlobalScorer
 from core.modules.im2latex_moudle import pad_batch_formulas
 from core.modules.seq_seq_utils import tile
-from core.backbones.Im2Text import Im2TextModel
+from .backbones.Im2Text import Im2TextModel
 from .base_model import BaseModel
 from . import register_model
 
@@ -56,6 +56,7 @@ class Im2LatexModel(BaseModel):
         self.net = Im2TextModel(self.vocab_size, self.vocab)
 
         self.net.to(self.gpu_ids[0])
+        self.distributed = False #分布式训练参数，这个应该在配置文件里面有，但是现在框架还没考虑这个，所以
         if args.isTrain:
             self.optimizer = torch.optim.SGD(itertools.chain(self.net.parameters()),
                                              lr=args.lr)

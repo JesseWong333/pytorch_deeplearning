@@ -8,6 +8,7 @@ import numpy as np
 import torch
 from core import build_model
 from core.post_process import build_post_process
+from core.pre_process import build_pre_process
 
 
 """
@@ -18,13 +19,13 @@ A helper class for inference
 class InferModel:
     def __init__(self, args):
         """
-
         :param args: the Config dict
         """
         self.model = build_model(args)
         self.model.setup(args)
         self.model.eval()
         self.post_process = build_post_process(args.post_process)
+        self.pre_process = build_pre_process(args.pre_process)
 
     def expand_img(self, src):
         # todo: magic number
@@ -42,6 +43,8 @@ class InferModel:
         return src
 
     def infer(self, src, **args):
+        src = self.pre_process(src)
+        print(src)
         src_t = self.expand_img(src)
         self.model.set_input(src_t)
         self.model.test()

@@ -3,7 +3,8 @@
 # Copyright (c) 2019-present, AI
 # All rights reserved.
 # @Time 2019/9/19
-
+import sys
+sys.path.append("..")
 import os
 import cv2
 import numpy as np
@@ -52,15 +53,18 @@ if __name__ == '__main__':
     args = ConfigDict(config)
     args.isTrain = False
 
-    img_base_path = '/media/Data/hcn/data/pixellink_data/'
+    img_path = '32067_20.png'
 
     c2td_model = InferModel(args)
-
-    for img, file_name in img_generator(img_base_path):
-        h, w, _ = img.shape
-        img, ratio = maybe_resize(img)
-        img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
-        img = image_normalize(img, pixel_mean, std_mean)
-        d = c2td_model.infer(img, ratio=ratio, src_img_shape=img.shape)
-        print(d)
+    img = cv2.imread(img_path)
+    print(img.shape)
+    img_copy = img.copy()
+    h, w, _ = img.shape
+    img, ratio = maybe_resize(img)
+    # img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
+    # img = image_normalize(img, pixel_mean, std_mean)
+    cords = c2td_model.infer(img, ratio=ratio, src_img_shape=img.shape)
+    for cord in cords:
+        cv2.rectangle(img_copy, (cord[0], cord[1]), (cord[2], cord[3]), [0, 0, 255], 2, 4)
+    cv2.imwrite('32067_20_res.png', img_copy)
 

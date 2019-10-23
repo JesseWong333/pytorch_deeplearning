@@ -6,6 +6,7 @@ import time
 import torch.nn as nn
 import math
 import sys
+from . import register_loss
 
 #
 # logger = logging.getLogger()
@@ -407,7 +408,7 @@ class LossComputeBase(nn.Module):
     def _unbottle(self, _v, batch_size):
         return _v.view(-1, batch_size, _v.size(1))
 
-
+@register_loss
 class Im2TextLoss(LossComputeBase):
     """
     Standard NMT Loss Computation.
@@ -417,6 +418,7 @@ class Im2TextLoss(LossComputeBase):
                  lambda_coverage=0.0):
         super(Im2TextLoss, self).__init__(criterion, generator)
         self.lambda_coverage = lambda_coverage
+
 
     def _make_shard_state(self, formulas, output, range_, attns=None):
         # print("s1", formulas.shape)

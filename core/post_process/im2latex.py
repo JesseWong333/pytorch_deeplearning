@@ -33,7 +33,7 @@ class Im2latex_postprocess(object):
             n_best_preds = [" ".join(pred)
                             for pred in trans.pred_sents[:self.n_best]]
             all_predictions += [n_best_preds]
-        return all_predictions
+        return all_predictions[0][0]
 
     def build_target_tokens(self, src, src_vocab, src_raw, pred, attn):
         # tgt_field = dict(self.fields)["tgt"].base_field

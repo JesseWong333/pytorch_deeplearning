@@ -12,6 +12,7 @@ import time
 import requests
 import base64
 from .logserver import LogServer
+from .images_utils import read_image_with_url, decode_image_with_base64
 
 """
 Parts of the codes form https://git.iyunxiao.com/DeepVision/text-detection-ctpn/blob/deploy_CT2D/main_server.py
@@ -56,32 +57,48 @@ def parse_post_data(post_data):
         return code, message
     return code, post_data
 
+def get_data(request, log_server):
+    data = request.data  # 获取post的数据
 
-def read_image_with_url(image_url):
-    """
-    image url -> numpy.array, [BGR]
-    :param image_url: url of image
-    :return:
-        code: 返回码, 0表正常,非0表异常
-        color_img: color image with type numpy.array
-    """
     code = 0
-    try:
-        s1 = time.time()
-        response = requests.get(image_url)
-        s2 = time.time()
-        log_server.logging('>>>>>>>> Time of io.imread: {:.2f}'.format(s2 - s1))
-    except Exception as e:
-        print(e)
-        code, message = 3, "fail"
-        return code, message
-    if response.status_code != 200:
-        code, message = 3, "fail"
+    # 判断输入数据的合法性
+    code, message = parse_post_data(data)
+    if code:
         return code, message
 
-    img_bytes = response.content
-    im_base64 = base64.b64encode(img_bytes)
-    im_base64 = str(im_base64, encoding="utf-8")
+    data = message
 
-    code, color_img = decode_image_with_base64(im_base64)
-    return code, color_img
+    im_url = data.get("im_url")  # 图片url
+    subject = data.get("subject")  # 科目
+    _type = data.get("type")  # 原卷切割标记
+    from_src = data.get("from_src")  # 调用用户标记
+
+    im_str = None
+    if im_url:  # 如果图片url存在，优先按照图片url方式调用服务
+        log_server.logging('>>>>>>>> [START] Get Image From: %s' % im_url)
+        log_server.logging('>>>>>>>> from: %s' % from_src)
+
+        code, message = read_image_with_url(im_url)
+    else:
+        log_server.logging('>>>>>>>> [START] Get Image from base64')
+        log_server.logging('>>>>>>>> from: %s' % from_src)
+        im_str = request.values.get("im_base64")
+        if im_str is None:
+            im_str = data.get("im_base64")
+
+        code, message = decode_image_with_base64(im_str)
+
+    if code:  # 读取图片错误或解码错误
+        return code, message
+
+    color_img = message  # 读图成功的情况下, 第二个参数为图片
+
+    # ret_data = (subject, _type, from_src, color_img)
+    ret_data = (im_url, im_str, subject, _type, from_src, color_img)
+
+    return code, ret_data
+
+
+
+
+

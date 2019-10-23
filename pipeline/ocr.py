@@ -3,7 +3,8 @@
 # Copyright (c) 2019-present, AI
 # All rights reserved.
 # @Time 2019/8/2
-
+import sys
+sys.path.append("..")
 import os
 import cv2
 import numpy as np
@@ -58,36 +59,42 @@ def visualize(img, bounding_boxes, labellist, img_patches, font, file_name, save
     newimg.save(os.path.join(save_path, file_name + '.png'))
 
 
-class PipeLine(object):
-    def __init__(self):
+class OCRPipeLine(object):
+    def __init__(self, ):
+        #模型配置参数是在这里导入好，还是放在外面，当成参数传进来？
         from configs.c2td import config as c2td_config
         from configs.crnn import config as crnn_config
+        from configs.resbilstm import config as resbilstm_config
+
         c2td_args = ConfigDict(c2td_config)
         c2td_args.isTrain = False
-        crnn_args = ConfigDict(crnn_config)
-        crnn_args.isTrain = False
+        # crnn_args = ConfigDict(crnn_config)
+        # crnn_args.isTrain = False
+        resbilstm_args = ConfigDict(resbilstm_config)
+        resbilstm_args.isTrain = False
 
-        self.c2td_model = InferModel(c2td_args)
-        self.crnn_model = InferModel(crnn_args)
+        self.det_model = InferModel(c2td_args)
+        # self.crnn_model = InferModel(crnn_args)
+        self.reg_model = InferModel(resbilstm_args)
 
-    def infer(self, img):
-        h, w, _ = img.shape
+    def infer(self, img):#单个例子的
+        # h, w, _ = img.shape
         # 检测填充
-        img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
-        img_patches, bounding_boxes = self.c2td_model.infer(img)  # 如果是扭曲的，这里应该是返回校正后的图片，为了接口统一，检测统一返回校正后的图片
+        # img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
+        img_patches, bounding_boxes = self.det_model.infer(img)  # 如果是扭曲的，这里应该是返回校正后的图片，为了接口统一，检测统一返回校正后的图片
 
         nh = 32  # todo magic number
         texts = []
         for img_patch in img_patches:  # 是否可以并行
             # 这个版本的crnn要求高度为32的灰度图, 且需要进行输入图片的归一化
-            gray_patch = cv2.cvtColor(img_patch, cv2.COLOR_BGR2GRAY)
-            h, w = gray_patch.shape
-            nw = int(nh * w / h)
-            gray_patch = cv2.resize(gray_patch, (nw, nh))
-            gray_patch = np.expand_dims(gray_patch, axis=2)
-            gray_patch = F.to_tensor(gray_patch)  # 这个标准步骤我以后还是做一下比较好，进行数据归一化
-            gray_patch.sub_(0.5).div_(0.5)
-            text = self.crnn_model.infer(gray_patch)
+            # gray_patch = cv2.cvtColor(img_patch, cv2.COLOR_BGR2GRAY)
+            # h, w = gray_patch.shape
+            # nw = int(nh * w / h)
+            # gray_patch = cv2.resize(gray_patch, (nw, nh))
+            # gray_patch = np.expand_dims(gray_patch, axis=2)
+            # gray_patch = F.to_tensor(gray_patch)  # 这个标准步骤我以后还是做一下比较好，进行数据归一化
+            # gray_patch.sub_(0.5).div_(0.5)
+            text = self.reg_model.infer(img_patch)
             texts.append(text)
 
         assert len(texts) == len(bounding_boxes)
@@ -106,17 +113,18 @@ if __name__ == '__main__':
             file_name = img_path.split('/')[-1].split('.')[0]
             yield img, file_name
 
-    pipeline = PipeLine()
+    pipeline = OCRPipeLine()
 
-    img_base_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/'
+    img_base_path = '/home/chen/mcm/ctpn_test_2019_01_23/ocr_KBM_test/test_data/junior_biology/'
     # img_base_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/all-images/'
-    save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo_results'
+    save_path = '/home/chen/hcn/data/C2TD_TEST/curve_res/junior_biology/'
 
     font_ttf = "STKAITI.TTF"  # 可视化字体类型
     font = ImageFont.truetype(font_ttf, 32)  # 字体与字体大小
+    print(pipeline.test_str)
 
     for img, file_name in tqdm(img_generator(img_base_path)):
         bounding_boxes, texts, img_patches = pipeline.infer(img)
-        visualize(img, bounding_boxes, texts, img_patches, font, file_name, save_path)
 
+        visualize(img, bounding_boxes, texts, img_patches, font, file_name, save_path)
 
