@@ -44,3 +44,10 @@ Now including:
 - im2latex: 少量没有解耦. Codes are from https://git.iyunxiao.com/DeepVision/pytorch-ocr-framework
 - Unet segmentation
 - To be continue: Transformers
+
+add by hcn
+- 增加文字识别模型resnet的backbone添加进来，并将beamsearch后处理及文字后处理整合到ctc_decode.py后处理，
+但是这部分代码一直在变动，后处理的代码应该再考虑怎么更好加进来
+- 单例推理预处理部分，这里是参考了注册机制，每一个模型的预处理注册一个预处理函数，但是感觉这样不太好，
+很多预处理的代码有重复部分，可能要考虑怎么抽取出来，用参数配置的方式
+
