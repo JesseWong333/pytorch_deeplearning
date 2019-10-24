@@ -4,7 +4,7 @@ which is developed for fast implementation, research and deploy
 
 # Getting Started
 
-实现参照
+基础设计实现参照, Thanks for their brilliant works 
 - pytorch cycle-gan
 - fairseq
 - mmdetection
@@ -45,7 +45,10 @@ Now including:
 - Unet segmentation
 - To be continue: Transformers
 
-# 如何贡献（欢迎使用并回馈代码，使其变得更好）：
+# 如何贡献：
+
+（欢迎使用并回馈代码，使其变得更好）
+
 - 请按照统一的代码风格，如pycharm默认的检查风格
 
 - 不允许随意添加分支。增加的新功能应该考虑如何能够与原master分支合并，并保证之前的代码兼容。应当持续思考如何使项目变得通用、方便使用
