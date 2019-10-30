@@ -14,9 +14,10 @@ from core.modules.text import Vocab
 from core.modules.beam_search import BeamSearch, GNMTGlobalScorer
 from core.modules.im2latex_moudle import pad_batch_formulas
 from core.modules.seq_seq_utils import tile
-from .backbones.Im2Text import Im2TextModel
+from core.backbones.Im2Text import Im2TextModel
 from .base_model import BaseModel
 from . import register_model
+from .losses import build_loss
 
 
 import numpy as np
@@ -34,6 +35,7 @@ class Im2LatexModel(BaseModel):
         self.loss_names = ['xent_loss']
         self.model_names = ['net',]
         self.output_names = ['results', ]
+        self.batch_size = args.batch_size
         model_cfg = args.Model
         vocab_cfg = args.Vocab
         self.vocab = Vocab(vocab_cfg)
@@ -58,11 +60,13 @@ class Im2LatexModel(BaseModel):
         self.net.to(self.gpu_ids[0])
         self.distributed = False #分布式训练参数，这个应该在配置文件里面有，但是现在框架还没考虑这个，所以
         if args.isTrain:
-            self.optimizer = torch.optim.SGD(itertools.chain(self.net.parameters()),
+            # self.optimizer = torch.optim.SGD(itertools.chain(self.net.parameters()),
+            #                                  lr=args.lr)
+            self.optimizer = torch.optim.Adam(itertools.chain(self.net.parameters()),
                                              lr=args.lr)
 
             # 初始化损失函数, 检测的网络通常有很复杂的loss
-            self.criterion = build_loss_compute(self.net)
+            self.criterion = build_loss(args.loss)
             # 会调用父类的setup方法为optimizers设置lr schedulers
             self.optimizers = []
             self.optimizers.append(self.optimizer)
@@ -76,9 +80,11 @@ class Im2LatexModel(BaseModel):
                     tmp = list(self._form_prepro(i))
                     # 公式str预处理转int的label时, 在label 前插入init 的label
                     tmp.insert(0, self.vocab.id_init)
+                    # print(tmp)
                     formulas_list.append(tmp)
 
                 formulas, formulas_length = pad_batch_formulas(formulas_list, self.vocab.id_pad, self.vocab.id_end)
+                # print(formulas)
                 formulas = torch.LongTensor(formulas).to(self.device)
                 formulas = torch.unsqueeze(formulas, dim=2)
                 self.formulas = formulas
@@ -230,10 +236,14 @@ class Im2LatexModel(BaseModel):
     #         img_abs_name = os.path.join("/media/Data/hzc/datasets/formulas/all_test", self.input[i][1] + ".png")
     #         visual_one_res(img_abs_name, out[i][0], vis_path)
 
-    def cal_loss(self):
-        self.forward()
-        recog_loss, n_words, n_correct = self.criterion(self.formulas, self.logits, self.attn, \
-                                                        normalization=self.opt.batch_size, \
+    def backward(self):
+        # self.forward()
+        #add by hcn
+        output = self.logits
+        bottle_output = output.view(-1, output.size(2))
+        self.scores = self.net.generator(bottle_output)
+        recog_loss, n_words, n_correct = self.criterion(self.formulas, self.scores, self.attn, \
+                                                        normalization=self.batch_size, \
                                                         trunc_size=self.formulas.shape[1])
         # recog_loss_sum = sum(recog_loss)
         # n_words_sum = sum(n_words)
@@ -243,4 +253,12 @@ class Im2LatexModel(BaseModel):
         # self.acc = torch.FloatTensor([float(100 * n_correct / n_words)]).to(recog_loss.device)
         # self.ppl = torch.FloatTensor([float(math.exp(min(recog_loss / n_words, 100)))]).to(recog_loss.device)
         # self.xent = recog_loss / n_correct
+        self.loss.backward()
+
+    def optimize_parameters(self):
+        self.forward()
+        self.optimizer.zero_grad()
+        self.backward()
+        self.optimizer.step()
+
 

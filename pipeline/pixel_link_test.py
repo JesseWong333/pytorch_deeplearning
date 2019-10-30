@@ -11,6 +11,7 @@ import numpy as np
 import torch
 from tools import InferModel
 from configs.config_util import ConfigDict
+import glob
 
 
 # todo: 标准的预处理过程抽象统一配置
@@ -27,11 +28,11 @@ def image_normalize(img, pixel_mean, std):
 def maybe_resize(img):
     # src_img = input.copy()
     ratio = 1
-    if max(img.shape[:2]) > 3200:
+    if max(img.shape[:2]) > 960:
         if img.shape[0] > img.shape[1]:
-            ratio = 3200 / img.shape[0]
+            ratio = 960 / img.shape[0]
         else:
-            ratio = 3200 / img.shape[1]
+            ratio = 960 / img.shape[1]
         img = cv2.resize(img, (0, 0), fx=ratio, fy=ratio)
     return img, ratio
 
@@ -52,19 +53,45 @@ if __name__ == '__main__':
     from configs.pixel_link import config
     args = ConfigDict(config)
     args.isTrain = False
-
-    img_path = '32067_20.png'
-
     c2td_model = InferModel(args)
-    img = cv2.imread(img_path)
-    print(img.shape)
-    img_copy = img.copy()
-    h, w, _ = img.shape
-    img, ratio = maybe_resize(img)
-    # img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
-    # img = image_normalize(img, pixel_mean, std_mean)
-    cords = c2td_model.infer(img, ratio=ratio, src_img_shape=img.shape)
-    for cord in cords:
-        cv2.rectangle(img_copy, (cord[0], cord[1]), (cord[2], cord[3]), [0, 0, 255], 2, 4)
-    cv2.imwrite('32067_20_res.png', img_copy)
+
+    datadir = r'/home/chen/mcm/ctpn_test_2019_01_23/test_data_all_latest/high_math'
+    vis_path = r'/home/chen/hcn/data/pixel_link_data/formula_detection/high_math_1029'
+    img_paths = glob.glob(os.path.join(datadir, '*.png'))
+    for img_path in img_paths:
+        print(img_path)
+        img = cv2.imread(img_path)
+        img_copy = img.copy()
+        img_shape = img.shape
+        img, ratio = maybe_resize(img)
+        # img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
+        # img = image_normalize(img, pixel_mean, std_mean)
+        cords, pixel_pos_scores, link_pos_scores, mask = c2td_model.infer(img, ratio=ratio, src_img_shape=img_shape)
+        # hot_map = np.squeeze(np.where(pixel_pos_scores >= 0.7, 255, 0))
+        # link_pos_scores = np.squeeze(link_pos_scores, 0)
+        # link_mask_0 = np.where(link_pos_scores[:, :, 0] >= 0.5, 255, 0)
+        # link_mask_1 = np.where(link_pos_scores[:, :, 1] >= 0.5, 255, 0)
+        # link_mask_2 = np.where(link_pos_scores[:, :, 2] >= 0.5, 255, 0)
+        # link_mask_3 = np.where(link_pos_scores[:, :, 3] >= 0.5, 255, 0)
+        for cord in cords:
+            cv2.rectangle(img_copy, (cord[0], cord[1]), (cord[4], cord[5]), [0, 0, 255], 2, 4)
+        basename = os.path.basename(img_path)
+        savename = os.path.join(vis_path, basename)
+        # hotmap_name = os.path.join(vis_path, basename.split('.', 1)[0] + '_scoremap.png')
+        # link_0 = os.path.join(vis_path, basename.split('.', 1)[0] + '_0.png')
+        # link_1 = os.path.join(vis_path, basename.split('.', 1)[0] + '_1.png')
+        # link_2 = os.path.join(vis_path, basename.split('.', 1)[0] + '_2.png')
+        # link_3 = os.path.join(vis_path, basename.split('.', 1)[0] + '_3.png')
+        # mask_name = os.path.join(vis_path, basename.split('.', 1)[0] + '_mask.png')
+        # mask = np.where(mask==1, 255, 0)
+        cv2.imwrite(savename, img_copy)
+        # cv2.imwrite(hotmap_name, hot_map)
+        # cv2.imwrite(link_0, link_mask_0)
+        # cv2.imwrite(link_1, link_mask_1)
+        # cv2.imwrite(link_2, link_mask_2)
+        # cv2.imwrite(link_3, link_mask_3)
+        # cv2.imwrite(mask_name, mask)
+
+
+
 

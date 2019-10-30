@@ -15,8 +15,9 @@ config = dict(
     # ),
     loss=dict(
         type='Im2TextLoss',
-        thresh=0.5,
-        neg_pos=3
+        ignore_index=1,#padding_id
+        reduction='sum',
+        lambda_coverage=0
     ),
     dataset=dict(
         type='ImageIm2LatexDataset',
@@ -71,7 +72,7 @@ config = dict(
 
     isTrain=True,
     name='im2latex',
-    checkpoints_dir='/media/Data/hcn/project/pytorch-ocr-framework/checkpoints',
+    checkpoints_dir='/home/chen/hcn/project/pytorch_deeplearning/checkpoints',
 
 
     # loss_ratios=[1, 0.1],
@@ -82,23 +83,22 @@ config = dict(
     gpu_ids=[3],
 
     # parameters of lr scheduler.
-    lr=0.001,
+    lr=0.0001,
     lr_policy='linearly_decay',
-    epoch=80,  # 总的训练的epoch
-    scheduler_param=[50, 30],  # 前50个epoch适用lr, 再经过30 epoch 线性减为0
+    epoch=16,  # 总的训练的epoch
+    scheduler_param=[8, 8],  # 前8个epoch适用lr, 再经过8 epoch 线性减为0
 
     init_type='xavier',
 
     # parameters of continuing to train the model
     epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     continue_train=False,
-    load_models=['../model_files/epoch_11_im2latexmodel.pth'],  # 支持epoch导入，或者直接pth导入
+    load_models=['/home/chen/hcn/project/pytorch_deeplearning/checkpoints/im2latex-2/latest_net_net.pth'],  # 支持epoch导入，或者直接pth导入
     # load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/checkpoints/pixel_based_TPS_OHEM_weighted/60_net_net.pth'],
 
     verbose=True,
     print_freq=100,
     save_latest_freq=5000,
-    save_epoch_freq=5,
-
+    save_epoch_freq=1,
     im2latex_congigs='../configs/im2latex.yaml'
 )

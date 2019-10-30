@@ -75,7 +75,7 @@ class Im2TextModel(nn.Module):
         tgt = tgt.permute(1, 0, 2)
         # 为什么排除最后一位, 最后一位要么是pad, 要么是end
         tgt = tgt[:-1]  # exclude last target from inputs
-        enc_state, memory_bank, lengths = self.encoder(src, lengths)
+        enc_state, memory_bank, lengths = self.encoder(src, lengths) #hidden_t -> enc_state, out -> memory_bank, lengths
         if bptt is False:
             self.decoder.init_state(src, memory_bank, enc_state)
         dec_out, attns = self.decoder(tgt, memory_bank,
@@ -182,7 +182,6 @@ class ImageEncoder(nn.Module):
             outputs, hidden_t = self.rnn(with_pos)
             all_outputs.append(outputs)
         out = torch.cat(all_outputs, 0)
-
         return hidden_t, out, lengths
 
     def update_dropout(self, dropout):

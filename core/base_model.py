@@ -104,16 +104,17 @@ class BaseModel():
     # save core to the disk
     def save_networks(self, epoch):
         for name in self.model_names:
+            print(name)
             if isinstance(name, str):
                 save_filename = '%s_net_%s.pth' % (epoch, name)
                 save_path = os.path.join(self.save_dir, save_filename)
                 net = getattr(self, name)
 
-                if len(self.gpu_ids) > 0 and torch.cuda.is_available():
+                if len(self.gpu_ids) > 1 and torch.cuda.is_available():
                     torch.save(net.module.cpu().state_dict(), save_path)
-                    net.cuda(self.gpu_ids[0])
+                    # net.cuda(self.gpu_ids[0])#remove by hcn. Why to do this operation???
                 else:
-                    torch.save(net.cpu().state_dict(), save_path)
+                    torch.save(net.state_dict(), save_path)
 
     def load_networks(self, name, load_path):
         net = getattr(self, name)

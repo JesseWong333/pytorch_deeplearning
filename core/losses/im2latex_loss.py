@@ -286,10 +286,10 @@ class LossComputeBase(nn.Module):
         normalzation (str): normalize by "sents" or "tokens"
     """
 
-    def __init__(self, criterion, generator):
+    def __init__(self, ignore_index, reduction):
         super(LossComputeBase, self).__init__()
-        self.criterion = criterion
-        self.generator = generator
+        self.criterion = nn.NLLLoss(ignore_index=ignore_index, reduction=reduction)
+        # self.generator = generator
 
     @property
     def padding_idx(self):
@@ -414,9 +414,13 @@ class Im2TextLoss(LossComputeBase):
     Standard NMT Loss Computation.
     """
 
-    def __init__(self, criterion, generator, normalization="sents",
-                 lambda_coverage=0.0):
-        super(Im2TextLoss, self).__init__(criterion, generator)
+    # def __init__(self, criterion, generator, normalization="sents",
+    #              lambda_coverage=0.0):
+    #     super(Im2TextLoss, self).__init__(criterion, generator)
+    #     self.lambda_coverage = lambda_coverage
+    #add by hcn
+    def __init__(self, ignore_index, reduction, normalization="sents", lambda_coverage=0.0):
+        super(Im2TextLoss, self).__init__(ignore_index, reduction)
         self.lambda_coverage = lambda_coverage
 
 
@@ -437,17 +441,17 @@ class Im2TextLoss(LossComputeBase):
                       coverage_attn=None):
         # print("s2", target.shape)
 
-        bottled_output = self._bottle(output)
+        # bottled_output = self._bottle(output)
 
-        scores = self.generator(bottled_output)
+        # scores = self.generator(bottled_output)
         gtruth = target.view(-1)
         # gtruth = target.permute(1, 0).view(-1)
 
         # print("scores", scores.shape, gtruth.shape, target.shape)
 
-        loss = self.criterion(scores, gtruth)
+        loss = self.criterion(output, gtruth)
 
-        stats = self._stats(scores, gtruth)
+        stats = self._stats(output, gtruth)
 
         return loss, stats
 
@@ -485,29 +489,29 @@ class Im2TextLoss(LossComputeBase):
 #         return loss
 
 
-def build_loss_compute(model, lambda_coverage=0):
-    """
-    Returns a LossCompute subclass which wraps around an nn.Module subclass
-    (such as nn.NLLLoss) which defines the loss criterion. The LossCompute
-    object allows this loss to be computed in shards and passes the relevant
-    data to a Statistics object which handles training/validation logging.
-    Currently, the NMTLossCompute class handles all loss computation except
-    for when using a copy mechanism.
-
-    """
-    # device = torch.device("cpu")
-    device = torch.device("cuda")
-    padding_idx = 1
-    # unk_idx = 0
-    criterion = nn.NLLLoss(ignore_index=padding_idx, reduction='sum')
-
-    # if the loss function operates on vectors of raw logits instead of
-    # probabilities, only the first part of the generator needs to be
-    # passed to the NMTLossCompute. At the moment, the only supported
-    # loss function of this kind is the sparsemax loss.
-    loss_gen = model.generator
-
-    compute = Im2TextLoss(criterion, loss_gen, lambda_coverage=lambda_coverage)
-    compute = compute.to(device)
-
-    return compute
+# def build_loss_compute(model, lambda_coverage=0):
+#     """
+#     Returns a LossCompute subclass which wraps around an nn.Module subclass
+#     (such as nn.NLLLoss) which defines the loss criterion. The LossCompute
+#     object allows this loss to be computed in shards and passes the relevant
+#     data to a Statistics object which handles training/validation logging.
+#     Currently, the NMTLossCompute class handles all loss computation except
+#     for when using a copy mechanism.
+#
+#     """
+#     # device = torch.device("cpu")
+#     device = torch.device("cuda")
+#     padding_idx = 1
+#     # unk_idx = 0
+#     criterion = nn.NLLLoss(ignore_index=padding_idx, reduction='sum')
+#
+#     # if the loss function operates on vectors of raw logits instead of
+#     # probabilities, only the first part of the generator needs to be
+#     # passed to the NMTLossCompute. At the moment, the only supported
+#     # loss function of this kind is the sparsemax loss.
+#     loss_gen = model.generator
+#
+#     compute = Im2TextLoss(criterion, loss_gen, lambda_coverage=lambda_coverage)
+#     compute = compute.to(device)
+#
+#     return compute

@@ -44,7 +44,6 @@ class InferModel:
 
     def infer(self, src, **args):
         src = self.pre_process(src)
-        print(src)
         src_t = self.expand_img(src)
         self.model.set_input(src_t)
         self.model.test()

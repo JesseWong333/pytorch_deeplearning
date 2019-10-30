@@ -50,13 +50,14 @@ def process(pixel_pos_scores, link_pos_scores, img_shape, ratio, src_img_shape):
     # copy_pixel_pos_scores = np.where(copy_pixel_pos_scores > 0.5, 255, 0)
     # savepath = os.path.join(vis_path, file_name + '_scoremap.png')
     # cv2.imwrite(savepath, copy_pixel_pos_scores)
+    final_cords = []
 
     if len(bboxes) > 0:
         cords[:, 0::2] = np.clip(cords[:, 0::2], 0, src_img_shape[1] - 1)
         cords[:, 1::2] = np.clip(cords[:, 1::2], 0, src_img_shape[0] - 1)
-        cords = bboxes_to_quard(cords)
+        # final_cords = bboxes_to_quard(cords)
 
-    return cords
+    return cords, pixel_pos_scores, link_pos_scores, mask
 
 
 def bboxes_to_quard(bboxes):

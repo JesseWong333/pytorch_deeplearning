@@ -191,7 +191,7 @@ class ImageLineDataset(data.Dataset):
 
             # 创建对应的heat map作为label, 1/4 map_size
             factor = 4.0
-            heat_map = np.zeros(( int(croped_size[1] // factor), int(croped_size[0] // factor), 3), dtype=float)
+            heat_map = np.zeros((int(croped_size[1] // factor), int(croped_size[0] // factor), 3), dtype=float)
             for bbox in bboxes_target:
                 bbox_4 = [int(cond / factor) for cond in bbox]
                 xmin, ymin, xmax, ymax = bbox_4  # 缩放到1/4之后的坐标

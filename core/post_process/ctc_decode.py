@@ -98,6 +98,49 @@ def beam_search_postprocess(preds_softmax_array, converter, subject):
         return bs_candidates[min_ppl_id]
 
     return bs_candidates[0]
+
+# def beam_search_postprocess(preds_softmax_array, converter, subject):
+#     # beam search 结果集据概率降序排序
+#     # 取最高结果
+#     bs_candidates_rel = prefix_beam_search(preds_softmax_array[:, 0, :], converter, k=5)
+#     bs_candidates = list(bs_candidates_rel.keys())
+#     bs_candidates_prob = np.array(list(bs_candidates_rel.values()))
+#
+#     if pow(bs_candidates_prob[0], 1 / (len(bs_candidates[0]) if len(bs_candidates[0]) != 0 else 1)) < 0.74 \
+#             and np.sum(bs_candidates_prob[:2]) < 0.5:
+#         return ''
+#     # 利用分词离散度作为语句通顺程度判据
+#     # 候选集合中存在比top1 分词离散小的则选取，否则选取top1
+#     if len(bs_candidates) > 1:
+#         # 参考候选预测对符号丢失情况进行处理(包括成对符号的处理)
+#
+#         # 处理句首句尾丢失标点
+#         bs_candidates = add_sym2candidate(bs_candidates)
+#         # 处理句首序号丢失
+#         bs_candidates = correct(bs_candidates)
+#
+#         # for debug
+#         # print('after add end symbol, ',bs_candidates)
+#
+#         if subject != '英语':
+#             ppls = np.array([len(list(jieba.cut(desymbol(candidate), HMM=True))) for candidate in bs_candidates])
+#             alpha = 1.3
+#             ppl_id = np.argmax(bs_candidates_prob / (alpha * (ppls - np.min(ppls)) + 1))
+#             # for debug
+#             # print(bs_candidates, bs_batch_candidate_ppl, min_ppl_id)
+#         else:
+#             #  对英语科目，选取词汇错误最少的
+#             err_counts = [
+#                 np.sum([(not en_wchecker.check(word.strip())) for word in re.split(r'\W+', c) if word.strip() != ''])
+#                 for c in bs_candidates]
+#             # bs_batch_candidate_err_count = [len(en_checker.set_text(candidate)) for candidate in bs_candidates]
+#             ppl_id = np.argmin(err_counts)
+#
+#         return bs_candidates[ppl_id]
+#
+#     return bs_candidates[0]
+
+
 def prefix_beam_search(ctc, converter, lm=None, k=25, alpha=0.30, beta=5, prune=0.001):
     """
     Performs prefix beam search on the output of a CTC network.
