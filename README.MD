@@ -35,12 +35,12 @@ which is developed for fast implementation, research and deploy
 
 
 # This project is still under development.
-The interface is not stable.
+The interface is unstable.
 
 Now including:
 - C^2TD: a fast and robust text detector via centre line regression and centre border probability[.config\c2td.py]
 - CRNN & GRCNN: only inference
-- pixel-link: only inference. Codes are from https://git.iyunxiao.com/DeepVision/pytorch-ocr-framework
+- pixel-link: Codes are from https://git.iyunxiao.com/DeepVision/pytorch-ocr-framework
 - im2latex: 少量没有解耦. Codes are from https://git.iyunxiao.com/DeepVision/pytorch-ocr-framework
 - Unet segmentation
 - To be continue: Transformers
