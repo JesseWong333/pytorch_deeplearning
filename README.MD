@@ -22,7 +22,7 @@ which is developed for fast implementation, research and deploy
 - [ ] feature； weight-decay 配置
 - [ ] ~~feature: backbone支持函数返回model~~
 - [ ] 通用的流程 pipe_line抽象, 如：检测+识别，添加服务代码
-- [ ] visdom训练loss可视化，以及结果的可视化. 代码中启动visdom, 不能手动启动visdom
+- [X] visdom训练loss可视化，以及结果的可视化. 代码中启动visdom, 不能手动启动visdom
 - [ ] 支持训练时评估：从dataset 和 临时的文件夹。 需要可配置是否使用
 - [ ] 提供lmdb, HDF5数据库的通用读写工具、模板代码
 - [ ] 提供已经deploy ready 的模型的Tensor RT转换工具, 模板代码
@@ -66,3 +66,6 @@ hcn
 - 单例推理预处理部分，这里是参考了注册机制，每一个模型的预处理注册一个预处理函数，但是感觉这样不太好，
 很多预处理的代码有重复部分，可能要考虑怎么抽取出来，用参数配置的方式
 - 增加im2latext及pixellink训练代码
+
+Jesse Wong
+- visdom子进程启动。可视化显示loss. 等待"支持训练时评估"功能完成后，接入更多的可视化展示

@@ -1,14 +1,17 @@
 import time
+from visdom_visualize import Visualizer
 from core.data import build_dataset
 from core import build_model
 from configs.config_util import ConfigDict
-from configs.im2latex import config  # todo argparse指定配置文件
+from configs.c2td import config  # todo argparse指定配置文件
 
 if __name__ == '__main__':
 
     args = ConfigDict(config)  # config file从文件读入
+    visualizer = Visualizer()
+
     data_loader = build_dataset(args)
-    dataset_size = len(data_loader)
+    dataset_size = len(data_loader) * args.batch_size
     print('#batch images = %d' % dataset_size)
 
     model = build_model(args)  # 先调用了initialize，
@@ -34,6 +37,8 @@ if __name__ == '__main__':
                 losses = model.get_current_losses()  # Base model的方法
                 t = (time.time() - iter_start_time) / args.batch_size
                 model.print_train_info(epoch, epoch_iter, t, t_data)
+
+                visualizer.plot_current_losses(epoch, float(epoch_iter) / dataset_size, losses)
 
             if total_steps % args.save_latest_freq == 0:
                 print('saving the latest model (epoch %d, total_steps %d)' %
