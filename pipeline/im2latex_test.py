@@ -9,12 +9,9 @@ import os
 import cv2
 import numpy as np
 import torch
+import cv2
 from tools import InferModel
-from configs.config_util import ConfigDict, load_config
-from PIL import Image
-from torchvision import transforms
-
-
+from utils.config_util import ConfigDict
 
 # images = []
 # formulas = []

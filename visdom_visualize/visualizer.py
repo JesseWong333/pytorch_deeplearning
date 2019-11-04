@@ -6,8 +6,8 @@
 
 import sys
 import numpy as np
-import visdom
-from backports import subprocess
+# import visdom
+from .backports import subprocess
 
 python_path = sys.executable
 VisdomExceptionBase = ConnectionError

@@ -12,7 +12,7 @@ import torchvision.transforms.functional as F
 import operator
 from PIL import ImageDraw, Image, ImageFont
 from tools import InferModel
-from configs.config_util import ConfigDict
+from utils.config_util import ConfigDict
 
 
 """
@@ -63,7 +63,6 @@ class OCRPipeLine(object):
     def __init__(self, ):
         #模型配置参数是在这里导入好，还是放在外面，当成参数传进来？
         from configs.c2td import config as c2td_config
-        from configs.crnn import config as crnn_config
         from configs.resbilstm import config as resbilstm_config
 
         c2td_args = ConfigDict(c2td_config)

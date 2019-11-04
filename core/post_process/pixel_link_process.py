@@ -7,7 +7,7 @@ import torch.nn.functional as F
 import numpy as np
 import cv2
 from . import register_post_process
-from configs.config_util import ConfigDict
+from utils.config_util import ConfigDict
 from configs.pixel_link import config as pixel_link_config
 config = ConfigDict(pixel_link_config['pixel_link'])
 

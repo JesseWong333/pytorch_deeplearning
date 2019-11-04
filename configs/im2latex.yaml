@@ -20,16 +20,13 @@ Data:
         [1000, 400], [1200, 200], [1600, 200]
         ]
   output: "output/"
-
 Vocab:
   unk: "_UNK"
   pad: "_PAD"
   end: "_END"
   init: "_INIT"
-
   path_vocab: "/media/Data/hzc/datasets/formulas/0603/tokens-utf-8.txt"
   min_count_tok: 2
-
 Training:
   lr_method: "Adam"
   n_epochs: 15
@@ -43,7 +40,6 @@ Training:
   end_decay: 13
   lr_warm: 1e-4
   end_warm: 2
-
 Model:
   encoder_cnn: "vanilla"
   positional_embeddings: True
@@ -63,4 +59,3 @@ Model:
   dec_rnn_h: 512
   clip_grad: True
   max_grad_norm: 20
-

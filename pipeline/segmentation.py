@@ -6,10 +6,8 @@
 
 import os
 import cv2
-import numpy as np
-import torchvision.transforms.functional as F
 from tools import InferModel
-from configs.config_util import ConfigDict
+from utils.config_util import ConfigDict
 
 
 def img_generator(folder):
