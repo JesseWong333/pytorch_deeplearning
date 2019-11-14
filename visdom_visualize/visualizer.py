@@ -6,7 +6,7 @@
 
 import sys
 import numpy as np
-# import visdom
+import visdom
 from .backports import subprocess
 
 python_path = sys.executable

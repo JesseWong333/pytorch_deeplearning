@@ -25,7 +25,7 @@ which is developed for fast implementation, research and deploy
 - [X] visdom训练loss可视化，以及结果的可视化. 代码中启动visdom, 不能手动启动visdom
 - [X] 支持训练时评估：从dataset 和 临时的文件夹。 需要可配置是否使用
 - [ ] 提供lmdb, HDF5数据库的通用读写工具、模板代码
-- [ ] 提供已经deploy ready 的模型的Tensor RT转换工具, 模板代码
+- [ ] new feature!!! 模型加速：TVM 或者 TensorRT 实现提供deploy ready模型编译。倾向于TVM，比较有前景的技术栈
 - [ ] DataParallel之外的，高效的多卡分布式训练。pytorch自带的及第三方的
 
 易用性
