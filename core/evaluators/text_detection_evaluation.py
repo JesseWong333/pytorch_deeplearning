@@ -92,12 +92,11 @@ class TextDetectionEvaluator(object):
                         dt_match.append(match)
                     all_dt_match.extend(dt_match)
             all_dt_match = np.array(all_dt_match, dtype=np.bool).astype(np.int)
-            n_pos = np.cumsum(all_dt_match)
-            n_dt = np.arange(1, len(all_dt_match) + 1)
-            precision = n_pos.astype(np.float) / n_dt.astype(np.float)
-            recall = n_pos.astype(np.float) / float(n_gt)
-            eps = 1e-9
-            f_score = 1.0 / ((1.0 / (precision + eps)) + (1.0 / (recall + eps)))
+            n_pos = np.sum(all_dt_match)
+            n_dt = len(all_dt_match)
+            precision = n_pos / n_dt
+            recall = n_pos / float(n_gt)
+            f_score = 0 if (precision + recall) == 0 else 2.0 * precision * recall / (precision + recall)
             msg = "f_score: %.4fd, precision: %.4f, recall: %.4f" % (f_score, precision, recall)
             print(msg)
             model.save_log(msg)
