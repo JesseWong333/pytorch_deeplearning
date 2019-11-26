@@ -1,8 +1,33 @@
 import random
 import cv2
 import math
+import os
+import os.path as osp
 import numpy as np
+import codecs
 # from utils.preprocess_util import correct_image
+
+def load_ann_file(dataroot):
+    img_files, trg_list = [], None
+    if osp.isdir(dataroot):
+        exts = ['png', 'jpg', 'jpeg', 'JPG']
+        for parent, dirnames, filenames in os.walk(os.path.join(dataroot, "images")):
+            for filename in filenames:
+                for ext in exts:
+                    if filename.endswith(ext):
+                        img_files.append(os.path.join(parent, filename))
+                        break
+    elif osp.isfile(dataroot):
+        with codecs.open(dataroot, "r", "utf-8") as f:
+            lines = f.readlines()
+        trg_list = []
+        for line in lines:
+            _ = line.strip().split(' ', 1)
+            img_files.append(_[0])
+            trg_list.append(_[1])
+    return img_files, trg_list
+
+
 
 def load_annoataion(p):
     bbox = []

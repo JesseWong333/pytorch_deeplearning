@@ -5,17 +5,10 @@
 
 import sys
 sys.path.append("..")
-import os
 import cv2
-import numpy as np
-import torch
 from tools import InferModel
-from configs.config_util import ConfigDict, load_config
-from PIL import Image
-from torchvision import transforms
 import random
-
-
+from utils.config_util import ConfigDict
 
 # images = []
 # formulas = []

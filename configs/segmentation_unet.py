@@ -17,10 +17,20 @@ config = dict(
         neg_pos=3
     ),
     dataset=dict(
+        train=dict(
         type='SteelDefectDataset',
         csv_file='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/severstal-steel-defect-detection/train.csv',
-        folder='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/severstal-steel-defect-detection/train_images'
+        folder='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/severstal-steel-defect-detection/train_images'),
+    val=dict()
     ),
+    require_evaluation=False,
+    evaluator=dict(
+        type="TextRecognitionEvaluator",
+        vis_flag=True,
+        vis_path='/media/Data/hzc/datasets/exam_number/frame_result',
+    ),
+    collate_fn=True,
+
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='convert_seg_to_encoded_pixels'
@@ -56,5 +66,7 @@ config = dict(
     verbose=False,
     print_freq=30,
     save_latest_freq=5000,
-    save_epoch_freq=5
+    save_epoch_freq=5,
+    eval_iter_freq=6000,
+    eval_epoch_freq=5,
 )

@@ -17,28 +17,39 @@ config = dict(
         type='PixelLinkLoss'
     ),
     dataset=dict(
-        type='ImagePixelLinkDataset',
-        dataroot='/home/chen/hcn/data/pixel_link_data/0517/train/',
-        config=dict(
-            score_map_shape=(128, 256),
-            stride=4,
-            pixel_cls_weight_method="PIXEL_CLS_WEIGHT_bbox_balanced",
-            text_label=1,
-            ignore_label=-1,
-            background_label=0,
-            num_neighbours=4,
-            bbox_border_width=1,
-            pixel_cls_border_weight_lambda=1.0,
-            pixel_neighbour_type="PIXEL_NEIGHBOUR_TYPE_4",
-            decode_method="DECODE_METHOD_join",
-            min_area=10,
-            min_height=1,
-            pixel_conf_threshold=0.7,
-            link_conf_threshold=0.5,
-            pixel_mean=[0.91610104, 0.91612387, 0.91603917],
-            pixel_std=[0.2469206, 0.24691878, 0.24692364]
-        )
+        train=dict(
+            type='ImagePixelLinkDataset',
+            dataroot='/home/chen/hcn/data/pixel_link_data/0517/train/',
+            config=dict(
+                score_map_shape=(128, 256),
+                stride=4,
+                pixel_cls_weight_method="PIXEL_CLS_WEIGHT_bbox_balanced",
+                text_label=1,
+                ignore_label=-1,
+                background_label=0,
+                num_neighbours=4,
+                bbox_border_width=1,
+                pixel_cls_border_weight_lambda=1.0,
+                pixel_neighbour_type="PIXEL_NEIGHBOUR_TYPE_4",
+                decode_method="DECODE_METHOD_join",
+                min_area=10,
+                min_height=1,
+                pixel_conf_threshold=0.7,
+                link_conf_threshold=0.5,
+                pixel_mean=[0.91610104, 0.91612387, 0.91603917],
+                pixel_std=[0.2469206, 0.24691878, 0.24692364]
+            )
+        ),
+        val=dict()
     ),
+    require_evaluation=False,
+    evaluator=dict(
+        type="TextRecognitionEvaluator",
+        vis_flag=True,
+        vis_path='/media/Data/hzc/datasets/exam_number/frame_result',
+    ),
+    collate_fn=True,
+
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='pixel_link_process'
@@ -46,6 +57,7 @@ config = dict(
     pre_process=dict(
         type='pixellink_preprocess'
     ),
+
 
     isTrain=True,
     name='pixel_link',
@@ -78,6 +90,8 @@ config = dict(
     print_freq=100,
     save_latest_freq=5000,
     save_epoch_freq=5,
+    eval_iter_freq=3000,
+    eval_epoch_freq=5,
 
     # pixle_link 在多个地方用到的配置
     pixel_link=dict(

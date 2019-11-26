@@ -31,9 +31,21 @@ config = dict(
     #     neg_pos=3
     # ),
     # dataset=dict(
+    #     train=dict(
     #     type='ImageLine2Dataset',
     #     dataroot='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
+    #     ),
+    #     val=dict()
     # ),
+
+    require_evaluation=False,
+    evaluator=dict(
+        type="TextRecognitionEvaluator",
+        vis_flag=True,
+        vis_path='/media/Data/hzc/datasets/exam_number/frame_result',
+    ),
+    collate_fn=True,
+
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='ctc_decoder',

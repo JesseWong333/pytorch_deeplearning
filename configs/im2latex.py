@@ -20,9 +20,20 @@ config = dict(
         lambda_coverage=0
     ),
     dataset=dict(
-        type='ImageIm2LatexDataset',
-        dataroot='/home/chen/hcn/data/formula/formula_images/labels/0917/'
+        train=dict(
+            type='ImageIm2LatexDataset',
+            dataroot='/home/chen/hcn/data/formula/formula_images/labels/0917/'),
+        val=dict(
+        )
     ),
+    require_evaluation=False,
+    evaluator=dict(
+        type="TextRecognitionEvaluator",
+        vis_flag=True,
+        vis_path='/media/Data/hzc/datasets/exam_number/frame_result',
+    ),
+    collate_fn=True,
+
     # 后处理分  todo: 后处理也要调用全局的args呢，写在前面？
     Vocab=dict(
         unk="_UNK",
@@ -99,5 +110,7 @@ config = dict(
     verbose=True,
     print_freq=100,
     save_latest_freq=5000,
-    save_epoch_freq=1
+    save_epoch_freq=1,
+    eval_iter_freq=3000,
+    eval_epoch_freq=5,
 )

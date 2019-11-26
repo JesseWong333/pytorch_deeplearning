@@ -10,7 +10,7 @@ import cv2
 import numpy as np
 import torch
 from tools import InferModel
-from configs.config_util import ConfigDict
+from utils.config_util import ConfigDict
 import glob
 
 

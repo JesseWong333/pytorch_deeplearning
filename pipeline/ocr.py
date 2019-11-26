@@ -12,12 +12,12 @@ import torchvision.transforms.functional as F
 import operator
 from PIL import ImageDraw, Image, ImageFont
 from tools import InferModel
-from configs.config_util import ConfigDict
 from utils.bboxes_utils import process_bboxes
 from utils.images_utils import maybe_resize
 from utils.skew_correct import correct_image
 from utils.bboxes_utils import sort_boxes
 import glob
+from utils.config_util import ConfigDict
 
 """
 检测 + 识别 pipeline
@@ -29,7 +29,7 @@ pipeline 要抽象吗？ 使用多线程机制
 class OCRPipeLine(object):
     def __init__(self, ):
         #模型配置参数是在这里导入好，还是放在外面，当成参数传进来？
-        from configs.c2td_resnet import config as c2td_config
+        from configs.c2td import config as c2td_config
         from configs.resbilstm import config as resbilstm_config
 
         c2td_args = ConfigDict(c2td_config)

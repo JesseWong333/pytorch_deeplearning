@@ -15,9 +15,21 @@ config = dict(
         neg_pos=3
     ),
     dataset=dict(
-        type='ImageLineShortsignDataset',
-        dataroot='/media/Data/hcn/data/C2TD_TEST/train_data/short_sign_det_2/'
+        train=dict(
+            type='ImageLine2Dataset',
+            dataroot='/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
+        ),
+        val=dict(
+        )
     ),
+    require_evaluation=False,
+    evaluator=dict(
+        type="TextRecognitionEvaluator",
+        vis_flag=True,
+        vis_path='/media/Data/hzc/datasets/exam_number/frame_result',
+    ),
+    collate_fn=True,
+
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='centre_line_process'
@@ -57,5 +69,7 @@ config = dict(
     verbose=False,
     print_freq=100,
     save_latest_freq=5000,
-    save_epoch_freq=5
+    save_epoch_freq=5,
+    eval_iter_freq=3000,
+    eval_epoch_freq=5,
 )
