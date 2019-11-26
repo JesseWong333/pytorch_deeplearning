@@ -20,7 +20,7 @@ config = dict(
     model='VanillaModel',
     backbone=dict(
         type='ResBilstm',
-        n_class=7286  # 具体的类别数通过代码中获取字典再设置
+        n_class=7957  # 具体的类别数通过代码中获取字典再设置
     ),
     # loss=dict(
     #     type='CentreLineLoss',
@@ -34,9 +34,8 @@ config = dict(
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='ctc_decoder',
-        vocab_path='../model_files/label_train_vocab.txt',
+        vocab_path='../model_files/label_1009_vocab.txt',
         vocab_type='col',
-        subject='数学',
         beam_search=True
     ),
     pre_process=dict(
@@ -66,7 +65,7 @@ config = dict(
     # parameters of continuing to train the model
     # epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     # continue_train=False,
-    load_models=['../model_files/epoch_3_32000_resctcmodel.pth'],
+    load_models=['../model_files/epoch_6_150000_resctcmodel.pth'],
 
     verbose=False,
     # print_freq=100,

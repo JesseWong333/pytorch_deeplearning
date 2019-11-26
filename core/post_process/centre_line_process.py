@@ -38,21 +38,20 @@ def process_bboxes(bboxes, ratio, img_shape):
     """
     # 要考虑是否为0的情形
     h, w, _ = img_shape
-    bboxes /= ratio
     bboxes = [(max(0, bbox[0]), max(0, bbox[1]), min(w, bbox[2]), min(h, bbox[3])) for bbox in bboxes]
     bboxes = set(bboxes)
     # 上边界的比例， 下边界的比例. 宽度为32像素的图，实际文字大小只有24. 上下只扩充实际大小的1/6
     bboxes_p = set()
     for bbox in bboxes:
         expand = 4
-        bboxes_p.add((bbox[0], max(0, bbox[1] - expand), bbox[2], min(h, bbox[3] + expand)))
+        bboxes_p.add((bbox[0]/ratio, max(0, bbox[1]/ratio - expand), bbox[2]/ratio, min(h, bbox[3]/ratio + expand)))
+        # bboxes_p.add((bbox[0] / ratio, bbox[1] / ratio, bbox[2] / ratio, bbox[3] / ratio))
     bboxes_p = np.array(list(bboxes_p), dtype=int)
     return bboxes_p
 
 
-
 @register_post_process
-def centre_line_process(out, img, ratio, img_shape, thresh=0.8):
+def centre_line_process(out, img, ratio, src_img_shape, thresh=0.8):
     """
     :param out: 1*3*h*w
     :return:
@@ -127,12 +126,12 @@ def centre_line_process(out, img, ratio, img_shape, thresh=0.8):
             # 根据左右边界回归结果 计算左右边界
 
     # 滤除噪音
-    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 1, cords))
+    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 1 and (cord[3] - cord[1]) > 0, cords))
     # cords = list(filter(lambda cord: (cord[3] - cord[1]) / (cord[2] - cord[0] + 1) > 2.5, cords))
-    cords = process_bboxes(cords, ratio, img_shape)
+    cords = process_bboxes(cords, ratio, src_img_shape)
 
 
     # todo 调试代码
     # cv2.imwrite(os.path.join(save_path, file_name + '_rectangle.png'), img_rectangle)
 
-    return cords, center_cords
+    return cords

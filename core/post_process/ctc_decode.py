@@ -17,6 +17,10 @@ import re
 import enchant
 en_wchecker = enchant.Dict("en_US")
 from collections import defaultdict, Counter
+from .lang_model.end_symbol_bs_opt import add_sym2candidate
+from .lang_model.head_char_correct import correct
+from collections import defaultdict, Counter, OrderedDict
+from .lang_model.symbol_transfer_ada import replace_symbol_ada
 
 
 """todo: 一个后处理class, 如何处理callable函数呢？ 比如这里的加上一个@callable?
@@ -27,15 +31,14 @@ from collections import defaultdict, Counter
 
 @register_post_process
 class ctc_decoder(object):
-    def __init__(self, vocab_path, vocab_type, subject, beam_search=False):
+    def __init__(self, vocab_path, vocab_type, beam_search=False):
         self.converter = strLabelConverter(vocab_path, vocab_type)
         self.beam_search = beam_search
-        self.subject = subject
 
-    def __call__(self, preds, src_img):  # todo: 处理src_img需求，是否有必要传？
+    def __call__(self, preds, src_img, subject):  # todo: 处理src_img需求，是否有必要传？
         pred_str = ''
         if self.beam_search:
-            pred_str = self.decode_bs(preds)
+            pred_str = self.decode_bs(preds, subject)
         else:
             pred_str = self.decode_no_bs(preds)
         return pred_str
@@ -48,39 +51,41 @@ class ctc_decoder(object):
         # raw_pred = converter.decode(preds.data, preds_size.data, raw=True)
         pred_str = self.converter.convert(preds.data, preds_size.data, raw=False)
         return pred_str
-    def decode_bs(self, preds):
+    def decode_bs(self, preds, subject):
         preds = preds[0].permute(1, 0, 2)
         preds_softmax = torch.nn.functional.softmax(preds, dim=2)
         preds_softmax_array = preds_softmax.cpu().detach().numpy()
         # beam search 结果集据概率降序排序
         # 取最高结果
-        return beam_search_postprocess(preds_softmax_array, self.converter, self.subject)
+        return beam_search_postprocess(preds_softmax_array, self.converter, subject)
 
 def beam_search_postprocess(preds_softmax_array, converter, subject):
     # beam search 结果集据概率降序排序
     # 取最高结果
-    bs_candidates = prefix_beam_search(preds_softmax_array[:, 0, :], converter)[:5]
+    bs_candidates_rel = prefix_beam_search(preds_softmax_array[:, 0, :], converter, k=5)
+    bs_candidates = list(bs_candidates_rel.keys())
+    bs_candidates_prob = np.array(list(bs_candidates_rel.values()))
 
+    # if pow(bs_candidates_prob[0], 1 / (len(bs_candidates[0]) if len(bs_candidates[0]) != 0 else 1)) < 0.74 \
+    #         and np.sum(bs_candidates_prob[:2]) < 0.5:
+    #     return ''
     # 利用分词离散度作为语句通顺程度判据
     # 候选集合中存在比top1 分词离散小的则选取，否则选取top1
     if len(bs_candidates) > 1:
         # 参考候选预测对符号丢失情况进行处理(包括成对符号的处理)
 
-        # for debug
-        # print('before add end symbol, ',bs_candidates)
-
-        # 处理句尾丢失标点
-        # bs_candidates = add_sym2candidate(bs_candidates)
+        # 处理句首句尾丢失标点
+        bs_candidates = add_sym2candidate(bs_candidates)
+        # 处理句首序号丢失
+        bs_candidates = correct(bs_candidates)
 
         # for debug
         # print('after add end symbol, ',bs_candidates)
 
         if subject != '英语':
-            bs_batch_candidate_ppl = np.array(
-                [len(list(jieba.cut(desymbol(candidate), HMM=False))) for candidate in bs_candidates])
-            min_ppl_id = np.argmin(bs_batch_candidate_ppl)
-            if bs_batch_candidate_ppl[0] <= bs_batch_candidate_ppl[min_ppl_id]:
-                min_ppl_id = 0
+            ppls = np.array([len(list(jieba.cut(desymbol(candidate), HMM=True))) for candidate in bs_candidates])
+            alpha = 1.3
+            ppl_id = np.argmax(bs_candidates_prob / (alpha * (ppls - np.min(ppls)) + 1))
             # for debug
             # print(bs_candidates, bs_batch_candidate_ppl, min_ppl_id)
         else:
@@ -89,59 +94,15 @@ def beam_search_postprocess(preds_softmax_array, converter, subject):
                 np.sum([(not en_wchecker.check(word.strip())) for word in re.split(r'\W+', c) if word.strip() != ''])
                 for c in bs_candidates]
             # bs_batch_candidate_err_count = [len(en_checker.set_text(candidate)) for candidate in bs_candidates]
-            min_ppl_id = np.argmin(err_counts)
+            ppl_id = np.argmin(err_counts)
 
-            # #for debug
-            # sorted_ids = np.argsort(err_counts)
-            # print(sorted_ids,min_ppl_id)
-            # #for debug end
-        return bs_candidates[min_ppl_id]
-
-    return bs_candidates[0]
-
-# def beam_search_postprocess(preds_softmax_array, converter, subject):
-#     # beam search 结果集据概率降序排序
-#     # 取最高结果
-#     bs_candidates_rel = prefix_beam_search(preds_softmax_array[:, 0, :], converter, k=5)
-#     bs_candidates = list(bs_candidates_rel.keys())
-#     bs_candidates_prob = np.array(list(bs_candidates_rel.values()))
-#
-#     if pow(bs_candidates_prob[0], 1 / (len(bs_candidates[0]) if len(bs_candidates[0]) != 0 else 1)) < 0.74 \
-#             and np.sum(bs_candidates_prob[:2]) < 0.5:
-#         return ''
-#     # 利用分词离散度作为语句通顺程度判据
-#     # 候选集合中存在比top1 分词离散小的则选取，否则选取top1
-#     if len(bs_candidates) > 1:
-#         # 参考候选预测对符号丢失情况进行处理(包括成对符号的处理)
-#
-#         # 处理句首句尾丢失标点
-#         bs_candidates = add_sym2candidate(bs_candidates)
-#         # 处理句首序号丢失
-#         bs_candidates = correct(bs_candidates)
-#
-#         # for debug
-#         # print('after add end symbol, ',bs_candidates)
-#
-#         if subject != '英语':
-#             ppls = np.array([len(list(jieba.cut(desymbol(candidate), HMM=True))) for candidate in bs_candidates])
-#             alpha = 1.3
-#             ppl_id = np.argmax(bs_candidates_prob / (alpha * (ppls - np.min(ppls)) + 1))
-#             # for debug
-#             # print(bs_candidates, bs_batch_candidate_ppl, min_ppl_id)
-#         else:
-#             #  对英语科目，选取词汇错误最少的
-#             err_counts = [
-#                 np.sum([(not en_wchecker.check(word.strip())) for word in re.split(r'\W+', c) if word.strip() != ''])
-#                 for c in bs_candidates]
-#             # bs_batch_candidate_err_count = [len(en_checker.set_text(candidate)) for candidate in bs_candidates]
-#             ppl_id = np.argmin(err_counts)
-#
-#         return bs_candidates[ppl_id]
-#
-#     return bs_candidates[0]
+        return bs_candidates[ppl_id]
+    # 全半角符号转换
+    res = replace_symbol_ada(bs_candidates[0], subject)
+    return res
 
 
-def prefix_beam_search(ctc, converter, lm=None, k=25, alpha=0.30, beta=5, prune=0.001):
+def prefix_beam_search(ctc, converter, lm=None, k=25, alpha=0.30, beta=0, prune=0.001):
     """
     Performs prefix beam search on the output of a CTC network.
     Args:
@@ -169,6 +130,7 @@ def prefix_beam_search(ctc, converter, lm=None, k=25, alpha=0.30, beta=5, prune=
     Pb[0][O] = 1
     Pnb[0][O] = 0
     A_prev = [O]
+    A_next = defaultdict(Counter)[0]
     # END: STEP 1
 
     # STEP 2: Iterations and pruning
@@ -223,8 +185,10 @@ def prefix_beam_search(ctc, converter, lm=None, k=25, alpha=0.30, beta=5, prune=
         sorter = lambda l: A_next[l] * (len(W(l)) + 1) ** beta
         A_prev = sorted(A_next, key=sorter, reverse=True)[:k]
     # END: STEP 7
-
-    return A_prev
+    rel = OrderedDict()
+    for item in A_prev:
+        rel[item] = A_next[item]
+    return rel
 
 
 
@@ -256,11 +220,13 @@ class strLabelConverter(object):
                     self.itos[i] = line.strip("\n")
                     self.stoi[line.strip("\n")] = i
                     i += 1
-        with open(vocab_path, encoding="utf-8") as f:
-            for i, c in enumerate(f.read()):
-                # assert c != ' '
-                self.itos[i + 1] = c
-                self.stoi[c] = i + 1
+        else:
+            with open(vocab_path, encoding="utf-8") as f:
+                for i, c in enumerate(f.read()):
+                    # assert c != ' '
+                    self.itos[i + 1] = c
+                    self.stoi[c] = i + 1
+
         self.itos[0] = ''
         self.stoi[''] = 0
         self.voc_len = len(self.stoi)

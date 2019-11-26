@@ -1,13 +1,18 @@
 cn2en_symbol = {
-    '，':',','。':'.','：':':','；':';',
-    '‘':'\'','’':'\'','”':'"','“':'"',
-    '（':'(','）':')','｛':'{','｝':'}',
-    '？':'?','！':'!',
+    '，': ',', '：': ':', '；': ';',
+    '‘': '\'', '’': '\'', '”': '"', '“': '"',
+    '（': '(', '）': ')', '｛': '{', '｝': '}',
+    '？': '?', '！': '!',
 }
-numbers =[str(i) for i in range(10)]
-en2cn_symbol =dict((item[1],item[0]) for item in cn2en_symbol.items())
-alphabet= 'abcdefghijklmnopqrstuvwxyz' \
-          'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+# 不用于转换，只用于判断前一个符号是cn/en类型
+en_spec_symbol_list = '.．$'
+# 不用于影响之前符号类型判断的标点列表
+symbol_not_effect2_prev_list = '_'
+
+numbers = [str(i) for i in range(10)]
+en2cn_symbol = dict((item[1], item[0]) for item in cn2en_symbol.items())
+alphabet = 'abcdefghijklmnopqrstuvwxyz' \
+           'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 
 
 def get_latter_type(string, prev_type, cur_step, latter_step=5):
@@ -52,32 +57,34 @@ def is_string_has_num(string, cur_id, prev_step, latter_step):
 
     return True
 
-def replace_symbol_ada(example_string,subject=None):
+
+def replace_symbol_ada(example_string, subject=None):
     '''
     根据标点前一字符类型进行替换操作
     :param example_string: 输入
     :return: string : 替换后的字符串
     '''
     string = ''
-    prev_char_type = 'en' if subject=='英语' else ''
+    prev_char_type = 'en' if subject == '英语' else ''
 
+    for id, char in enumerate(example_string):
+        # for debug
+        # print(char,prev_char_type,char in en2cn_symbol,char in cn2en_symbol)
 
-    for id,char in enumerate(example_string):
-        # print(prev_char_type,char in en2cn_symbol,char in cn2en_symbol)
-        latter_type = get_latter_type(example_string,prev_char_type,id,latter_step=5)
-        is_num_before_after = is_string_has_num(example_string,id,prev_step=2,latter_step=2)
+        latter_type = get_latter_type(example_string, prev_char_type, id, latter_step=5)
+        is_num_before_after = is_string_has_num(example_string, id, prev_step=2, latter_step=2)
 
-        if id>0 and char == '。'and is_num_before_after:
+        if id > 0 and char == '。' and is_num_before_after:
             # 特殊情况 如 1。2
-            string +='.'
-        elif id >0 and char=='.' and is_num_before_after:
+            string += '.'
+        elif id > 0 and char == '.' and is_num_before_after:
             # 1.2 排除前后有中文
             # print(char,is_num_before_after)
-            string+= char
-        elif prev_char_type == 'cn' and char in en2cn_symbol and latter_type=='cn':
+            string += char
+        elif prev_char_type == 'cn' and char in en2cn_symbol and latter_type == 'cn':
             char = en2cn_symbol[char]
             string += char
-        elif prev_char_type == 'en' and char in cn2en_symbol and latter_type=='en':
+        elif prev_char_type == 'en' and char in cn2en_symbol and latter_type == 'en':
             char = cn2en_symbol[char]
             string += char
         else:
@@ -86,18 +93,19 @@ def replace_symbol_ada(example_string,subject=None):
         # print(char)
 
         # 记录标点前一字符是中英何种类型
-        if (char in alphabet) or (char in en2cn_symbol) or (char =='$') or char=='．':
+        if (char in alphabet) or (char in en2cn_symbol) or (char in en_spec_symbol_list):
             prev_char_type = 'en'
-        elif char == ' ' or char in numbers or char=='_':
+        elif char == ' ' or (char in numbers) or (char in symbol_not_effect2_prev_list):
             pass
         else:
             prev_char_type = 'cn'
 
     # 特殊情况
     if subject == '英语':
-        string = string.replace('。。','..')
-
+        string = string.replace('。。', '..')
+    string = string.replace('—-', '——')
     return string
+
 
 if __name__ == '__main__':
     test_example = ['what the bi,',
@@ -119,11 +127,14 @@ if __name__ == '__main__':
                     '16. 有的人是单眼皮，有',
                     'C.$ 13.',
                     'D．.鹦鹉学舌',
+                    '“Use the good manncrs that your mother _ 70 _  ( teach） you."',
+                    '“Use the good manncrs that your mother _ 70 _  ( teach） you.”',
+                    '“Use the good manncrs that your mother _ 70__  ( teach） you."',
+                    '“Use the good manncrs that your mother _ 70_  ( teach） you."',
+                    '“Use the good manncrs that your mother _ 70__  ( teach） you.”',
                     ]
-    for exmaple in test_example[:]:
-
-        string = replace_symbol_ada(exmaple,subject='英语')
-        print(string)
+    for exmaple in test_example[-2:-1]:
+        string = replace_symbol_ada(exmaple, subject='英语')
+        print('英语科目:{}'.format(string))
         string = replace_symbol_ada(exmaple)
-        print(string)
-
+        print('非英语科目:{}'.format(string))

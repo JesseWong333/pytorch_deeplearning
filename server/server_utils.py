@@ -8,11 +8,7 @@
 import re
 import os
 import json
-import time
-import requests
-import base64
-from .logserver import LogServer
-from .images_utils import read_image_with_url, decode_image_with_base64
+from utils.images_utils import read_image_with_url, decode_image_with_base64
 
 """
 Parts of the codes form https://git.iyunxiao.com/DeepVision/text-detection-ctpn/blob/deploy_CT2D/main_server.py
@@ -41,11 +37,12 @@ def get_gpu_use():
 
 def parse_post_data(post_data):
     """
+    判断输入数据的合法性
     解释服务接收到的数据
     """
     code = 0
     if not post_data:
-        code, message = 1, "fail"
+        code, message = 1, "fail: post data is none"
         return code, message
     if isinstance(post_data, bytes):     # bytes->str
         post_data = post_data.decode()
@@ -53,11 +50,17 @@ def parse_post_data(post_data):
         post_data = json.loads(post_data)     # 通用字符串转为字典
     except:
         # "Input format is incorrect!"
-        code, message = 2, "fail"
+        code, message = 2, "fail: input format of post data is incorrect"
         return code, message
     return code, post_data
 
 def get_data(request, log_server):
+    """
+    获取并解释post数据
+    :param request:
+    :param log_server:
+    :return:
+    """
     data = request.data  # 获取post的数据
 
     code = 0
@@ -86,7 +89,7 @@ def get_data(request, log_server):
         if im_str is None:
             im_str = data.get("im_base64")
 
-        code, message = decode_image_with_base64(im_str)
+        code, message = decode_image_with_base64(im_str, log_server)
 
     if code:  # 读取图片错误或解码错误
         return code, message

@@ -4,14 +4,15 @@ import torch.utils.data as data
 import random
 import numpy as np
 import math
-
+from . import register_dataset
+import glob
 
 label_prefix = 'labels'
 
 
 def load_annoataion(p):
     bbox = []
-    with open(p, "r") as f:
+    with open(p, "r", encoding='utf-8') as f:
         lines = f.readlines()
     for line in lines:
         line = line.strip().split(",")[:8]
@@ -26,7 +27,7 @@ def load_annoataion(p):
 
 def load_annoataion_quard(p):
     bbox = []
-    with open(p, "r") as f:
+    with open(p, "r", encoding='utf-8') as f:
         lines = f.readlines()
     for line in lines:
         line = line.strip().split(",")[:4]
@@ -39,7 +40,7 @@ def cal_bbox(x_min, y_min, x_max, y_max, bboxs):
     bboxs_target = []
     for bbox in bboxs:
         # 高度方面，只要出现1/3在外面就不检测， 宽度方面， 只要超过一个h就要检测
-        tol_pix_h = (bbox[3]-bbox[1]) / 10 * 8
+        tol_pix_h = (bbox[3]-bbox[1]) / 3
         tol_pix_w = bbox[3]-bbox[1] / 2
 
         c_xmin = bbox[0] - x_min
@@ -53,7 +54,7 @@ def cal_bbox(x_min, y_min, x_max, y_max, bboxs):
         #高度判断
         in_ymin = max(0, c_ymin)
         in_ymax = min(y_max - y_min, c_ymax)
-        if in_ymax - in_ymin < 5:
+        if in_ymax - in_ymin < tol_pix_h:
             continue
 
         # 宽度判断
@@ -212,26 +213,22 @@ def random_scale_cn(img_whole, bboxs):
     # # 缩放后的文字高度应该在15~70之间
     # if median == 0:
     #     median = 35
-    # ratio = random.uniform(15 / median, 140 / median)
-    ratio = random.uniform(0.5, 1)
+    # ratio = random.uniform(15 / median, 70 / median)
+    ratio = random.uniform(0.5, 2)
     img_whole = cv2.resize(img_whole, None, fx=ratio, fy=ratio)
     bboxes = [[bbox[0] * ratio, bbox[1] * ratio, bbox[2] * ratio, bbox[3] * ratio] for bbox in bboxs]  # 对应坐标进行转换
     return img_whole, bboxes
 
 
+@register_dataset
+class ImageLineShortsignDataset(data.Dataset):
 
-class ImageLineDataset(data.Dataset):
-
-    @staticmethod
-    def modify_commandline_options(parser, is_train):
-        return parser
-
-    def __init__(self, opt):
-        super(ImageLineDataset, self).__init__()
-        self.opt = opt
+    def __init__(self, dataroot):
+        super(ImageLineShortsignDataset, self).__init__()
+        self.dataroot = dataroot
         img_files = []
         exts = ['png', 'jpg', 'jpeg', 'JPG']
-        for parent, dirnames, filenames in os.walk(os.path.join(opt.dataroot, "images")):
+        for parent, dirnames, filenames in os.walk(os.path.join(dataroot, "images")):
             for filename in filenames:
                 for ext in exts:
                     if filename.endswith(ext):
@@ -253,12 +250,12 @@ class ImageLineDataset(data.Dataset):
 
             _, fn = os.path.split(im_fn)
             fn, _ = os.path.splitext(fn)
-            txt_fn = os.path.join(self.opt.dataroot, label_prefix, fn + '.txt')
+            txt_fn = os.path.join(self.dataroot, label_prefix, fn + '.txt')
             if not os.path.exists(txt_fn):
                 # print("Ground truth for image {} not exist!".format(im_fn))
                 index = random.randint(0, len(self.img_files) - 1)
                 continue
-            bboxs = load_annoataion(txt_fn)
+            bboxs = load_annoataion_quard(txt_fn)
             if len(bboxs) == 0:
                 # print("Ground truth for image {} empty!".format(im_fn))
                 index = random.randint(0, len(self.img_files) - 1)
@@ -277,8 +274,6 @@ class ImageLineDataset(data.Dataset):
             # 这个尺寸仍然是一个较大的尺寸， 1536 * 512  为512*512的三倍
             croped_size = (1024, 512)  # w*h
             img_croped, bboxes_target = random_crop(img_whole, bboxs, croped_size, im_fn)
-
-
 
             if len(bboxes_target) <= 0:
                 index = random.randint(0, len(self.img_files) - 1)
@@ -352,21 +347,26 @@ class ImageLineDataset(data.Dataset):
 
 
 if __name__ == '__main__':
-    import torch
-
-    save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/visualise'
-
-    class Opt():
-        dataroot = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
-    opt = Opt()
-
-    data_loader = torch.utils.data.DataLoader(
-        ImageLineDataset(opt), shuffle=False, batch_size=1, num_workers=1,
-        collate_fn=ImageLineDataset.collate_fn)
-    # 注意这样得到的通道数在最后，默认的
-    for ii, (image, heatmap) in enumerate(data_loader):
-        image = np.squeeze(image, axis=0)
-        image = image.transpose((1, 2, 0))
-        new_im = image.copy()
-        # new_im = new_im.astype(np.uint8)
-        print(ii)
+    txtfiles = glob.glob(os.path.join('/home/chen/hcn/data/C2TD_TEST/train_data/short_sign_det/labels', '*.txt'))
+    for txt in txtfiles:
+        bboxs = load_annoataion_quard(txt)
+        print(bboxs)
+    pass
+    # import torch
+    #
+    # save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/visualise'
+    #
+    # class Opt():
+    #     dataroot = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
+    # opt = Opt()
+    #
+    # data_loader = torch.utils.data.DataLoader(
+    #     ImageLineDataset(opt), shuffle=False, batch_size=1, num_workers=1,
+    #     collate_fn=ImageLineDataset.collate_fn)
+    # # 注意这样得到的通道数在最后，默认的
+    # for ii, (image, heatmap) in enumerate(data_loader):
+    #     image = np.squeeze(image, axis=0)
+    #     image = image.transpose((1, 2, 0))
+    #     new_im = image.copy()
+    #     # new_im = new_im.astype(np.uint8)
+    #     print(ii)

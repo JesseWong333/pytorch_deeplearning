@@ -23,6 +23,7 @@ config = dict(
         imgH=32,
         nc=1,
         nclass=6725,  # 具体的类别数通过代码中获取字典再设置
+        nh=256
     ),
     # loss=dict(
     #     type='CentreLineLoss',
@@ -36,7 +37,13 @@ config = dict(
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='ctc_decoder',
-        convert_list_path='/home/chen/hcn/project/pytorch_deeplearning/files/char_std_print_6725.txt'
+        vocab_path='../model_files/char_std_print_6725.txt',
+        vocab_type='row',
+        beam_search=False
+
+    ),
+    pre_process=dict(
+        type='reg_preprocess'
     ),
 
     isTrain=True,
@@ -62,7 +69,7 @@ config = dict(
     # parameters of continuing to train the model
     # epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     # continue_train=False,
-    load_models=['/home/chen/hcn/project/pytorch_deeplearning/files/netCRNN_1_66000_2-1_new.pth'],
+    load_models=['../model_files/netCRNN_1_66000_2-1_new.pth'],
 
     verbose=False,
     # print_freq=100,
