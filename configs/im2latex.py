@@ -99,6 +99,5 @@ config = dict(
     verbose=True,
     print_freq=100,
     save_latest_freq=5000,
-    save_epoch_freq=1,
-    im2latex_congigs='../configs/im2latex.yaml'
+    save_epoch_freq=1
 )

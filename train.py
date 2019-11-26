@@ -2,7 +2,7 @@ import time
 from core.data import build_dataset
 from core import build_model
 from configs.config_util import ConfigDict
-from configs.im2latex import config  # todo argparse指定配置文件
+from configs.c2td_resnet import config  # todo argparse指定配置文件
 
 if __name__ == '__main__':
 
