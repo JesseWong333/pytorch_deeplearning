@@ -59,7 +59,7 @@ class TextDetectionEvaluator(object):
         y_lt = max(box1[1], box1[1])
         x_rb = min(box1[2], box1[2])
         y_rb = min(box1[3], box1[3])
-        h = y_rb - y_lt if y_rb - y_lt > 0  else 0
+        h = y_rb - y_lt if y_rb - y_lt > 0 else 0
         w = x_rb - x_lt if x_rb - x_lt > 0 else 0
         inter = h * w
         iou = inter / (area1 + area2 - inter)
@@ -94,7 +94,7 @@ class TextDetectionEvaluator(object):
             all_dt_match = np.array(all_dt_match, dtype=np.bool).astype(np.int)
             n_pos = np.cumsum(all_dt_match)
             n_dt = np.arange(1, len(all_dt_match) + 1)
-            precision = n_pos.asytpe(np.float) / n_dt.astype(np.float)
+            precision = n_pos.astype(np.float) / n_dt.astype(np.float)
             recall = n_pos.astype(np.float) / float(n_gt)
             eps = 1e-9
             f_score = 1.0 / ((1.0 / (precision + eps)) + (1.0 / (recall + eps)))

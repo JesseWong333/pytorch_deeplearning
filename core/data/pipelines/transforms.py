@@ -40,7 +40,6 @@ class LoadImageFromFile(object):
 
 @register_pipeline
 class LoadAnnotations(object):
-    """标注暂时只考虑两套, 一对多, 一对一"""
 
     def __init__(self,
                  with_bbox=True,
@@ -322,7 +321,7 @@ class AddNoise(object):
                 col = np.random.randint(0, height - 1)
                 value = np.random.randint(0, 255)
                 img[col][row] = value
-            img = img.astype(np.uint8)
+            img = np.clip(img, 0, 255).astype(np.uint8) # 处理溢出
             results['img'] = img
 
     def _add_blurnoise(self, results):
@@ -333,7 +332,7 @@ class AddNoise(object):
             img = results['img']
             rand = np.random.randint(min_val, max_val)
             img = cv2.blur(img, (rand, rand))
-            img = img.astype(np.uint8)
+            img = np.clip(img, 0, 255).astype(np.uint8) # 处理溢出
             results['img'] = img
     
     def __call__(self, results):
@@ -604,6 +603,72 @@ class strLabelConverter(object):
         elif isinstance(results, tuple):
             return self.decode(results)
 
+
+# add by hzc
+@register_pipeline
+class AttnLabelConverter(object):
+    """ Convert between text-label and text-index """
+
+    def __init__(self, vocab_path):
+        # character (str): set of the possible characters.
+        # [GO] for the start token of the attention decoder. [s] for end-of-sentence token.
+        with codecs.open(vocab_path, 'r', 'utf-8') as f:
+            data = f.read().strip()
+            character = data.split()
+        list_token = ['[GO]', '[s]']  # ['[s]','[UNK]','[PAD]','[GO]']
+        list_character = list(character)
+        print(list_character)
+        self.character = [list_token[0]] + list_character + [list_token[1]]
+        self.itos = {}
+        self.stoi = {}
+        for i, char in enumerate(self.character):
+            self.stoi[char] = i
+            self.itos[i] = char
+
+    def encode(self, results, batch_max_length=30):
+        """ convert text-label into text-index.
+        input:
+            text: text labels of each image. [batch_size]
+            batch_max_length: max length of text label in the batch. 25 by default
+
+        output:
+            text : the input of attention decoder. [batch_size x (max_length+2)] +1 for [GO] token and +1 for [s] token.
+                text[:, 0] is [GO] token and text is padded with [GO] token after [s] token.
+            length : the length of output of attention decoder, which count [s] token also. [3, 7, ....] [batch_size]
+        """
+        text = results['cpu_text']
+        length = [len(s) + 1 for s in text]  # +1 for [s] at end of sentence.
+        batch_max_length = max(length) # this is not allowed for multi-gpu setting
+        batch_max_length += 1
+        # additional +1 for [GO] at first step. batch_text is padded with [GO] token after [s] token.
+        # print(len(text))
+        # batch_text = torch.LongTensor(len(text), batch_max_length + 1).fill_(0)
+        batch_text = np.zeros((len(text), batch_max_length), dtype=np.int64)
+
+        for i, t in enumerate(text):
+            cur_text = list(t)
+            cur_text.append('[s]')
+            cur_text = [self.stoi[char] for char in cur_text]
+            batch_text[i][1:1 + len(cur_text)] = np.array(cur_text, dtype=np.int64)  # batch_text[:, 0] = [GO] token
+        results['text'] = batch_text
+        results['length'] = np.array(length, dtype=np.int32)
+
+    def decode(self, text_index, length):
+        """ convert text-index into text-label. """
+        texts = []
+        # print("text, length", text_index, length)
+        for index, l in enumerate(length):
+            text = ''.join([self.itos[i] for i in text_index[index, :]])
+            texts.append(text)
+        # print("decode", text_index, length, text)
+        return texts
+
+    def __call__(self, results):
+        if isinstance(results, dict):
+            self.encode(results)
+            return results
+        elif isinstance(results, tuple):
+            return self.decode(results)
 
 @register_pipeline
 class GetPixelLinkMap(object):

@@ -63,7 +63,7 @@ config = dict(
     # parameters of continuing to train the model
     epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     continue_train=False,
-    load_models=['../model_files/80_net_net.pth'],
+    load_models=['/media/Data/hcn/project/pytorch_deeplearning/model_files/ocr/80_net_net.pth'],
     # load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/checkpoints/pixel_based_TPS_OHEM_weighted/60_net_net.pth'],
 
     verbose=False,

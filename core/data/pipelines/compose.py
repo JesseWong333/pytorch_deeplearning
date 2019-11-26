@@ -9,6 +9,7 @@ from torchvision import transforms
 from PIL import Image
 import random
 import math
+import inspect
 import collections
 from . import register_pipeline, PIPELINE_REGISTRY
 

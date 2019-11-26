@@ -10,54 +10,142 @@ from . import register_post_process
 from utils.config_util import ConfigDict
 from configs.pixel_link import config as pixel_link_config
 config = ConfigDict(pixel_link_config['pixel_link'])
-
+"""
+hzc
+将后处理的都整成class, 方便避免导入一些不必要的包和模块
+"""
 
 """The codes are form https://git.iyunxiao.com/DeepVision/pytorch-ocr-framework"""
 
-
 @register_post_process
-def pixel_link_process(outputs, img, ratio, src_img_shape):
-    score = outputs[0]
+class pixel_link_process(object):
 
-    shape = score.shape
-    neighbor_num = int((shape[1] - 2) / 2)
-    pixel_pos_scores = F.softmax(score[:, 0:2, :, :], dim=1)[:, 1, :, :]
-    # pixel_pos_scores=torch.sigmoid(outputs[:,1,:,:])
-    # FIXME the dimention should be changed
-    link_scores = score[:, 2:, :, :].view(shape[0], 2, neighbor_num, shape[2], shape[3])
-    link_pos_scores = F.softmax(link_scores, dim=1)[:, 1, :, :, :]
-    # print(cords)
-    pixel_pos_scores = pixel_pos_scores.cpu().numpy()
-    link_pos_scores = link_pos_scores.cpu().numpy()
+    def __init__(self):
+        import pyximport
+        pyximport.install()
+        from .pixel_link_decode import decode_image_by_join
+        self.decode_image_by_join = decode_image_by_join
 
-    """ ratio 是根据已有的图片的缩放比例动态调整 """
+    def __call__(self, outputs, img, ratio, src_img_shape):
+        score = outputs[0]
 
-    return process(pixel_pos_scores, link_pos_scores, shape[2:], ratio, src_img_shape,)
+        shape = score.shape
+        neighbor_num = int((shape[1] - 2) / 2)
+        pixel_pos_scores = F.softmax(score[:, 0:2, :, :], dim=1)[:, 1, :, :]
+        # pixel_pos_scores=torch.sigmoid(outputs[:,1,:,:])
+        # FIXME the dimention should be changed
+        link_scores = score[:, 2:, :, :].view(shape[0], 2, neighbor_num, shape[2], shape[3])
+        link_pos_scores = F.softmax(link_scores, dim=1)[:, 1, :, :, :]
+        # print(cords)
+        pixel_pos_scores = pixel_pos_scores.cpu().numpy()
+        link_pos_scores = link_pos_scores.cpu().numpy()
+
+        """ ratio 是根据已有的图片的缩放比例动态调整 """
+
+        return self.process(pixel_pos_scores, link_pos_scores, shape[2:], ratio, src_img_shape, )
+
+    def process(self, pixel_pos_scores, link_pos_scores, img_shape, ratio, src_img_shape):
+
+        link_pos_scores = np.transpose(link_pos_scores, (0, 2, 3, 1))
+
+        mask = self.decode_batch(pixel_pos_scores, link_pos_scores)[0, ...]
+        bboxes = mask_to_bboxes(mask, img_shape)
+        cords = np.array(bboxes, dtype=np.float32)
+        cords *= 4
+        cords /= ratio
+        cords = cords.astype(np.int32)
+
+        # copy_pixel_pos_scores = np.squeeze(pixel_pos_scores)
+        # copy_pixel_pos_scores = np.where(copy_pixel_pos_scores > 0.5, 255, 0)
+        # savepath = os.path.join(vis_path, file_name + '_scoremap.png')
+        # cv2.imwrite(savepath, copy_pixel_pos_scores)
+        final_cords = []
+
+        if len(bboxes) > 0:
+            cords[:, 0::2] = np.clip(cords[:, 0::2], 0, src_img_shape[1] - 1)
+            cords[:, 1::2] = np.clip(cords[:, 1::2], 0, src_img_shape[0] - 1)
+            # final_cords = bboxes_to_quard(cords)
+
+        return cords, pixel_pos_scores, link_pos_scores, mask
+
+    def decode_batch(self, pixel_cls_scores, pixel_link_scores,
+                     pixel_conf_threshold=None, link_conf_threshold=None):
+
+        if pixel_conf_threshold is None:
+            pixel_conf_threshold = config.pixel_conf_threshold
+
+        if link_conf_threshold is None:
+            link_conf_threshold = config.link_conf_threshold
+
+        batch_size = pixel_cls_scores.shape[0]
+        batch_mask = []
+        for image_idx in range(batch_size):
+            image_pos_pixel_scores = pixel_cls_scores[image_idx, :, :]
+            image_pos_link_scores = pixel_link_scores[image_idx, :, :, :]
+            mask = self.decode_image(
+                image_pos_pixel_scores, image_pos_link_scores,
+                pixel_conf_threshold, link_conf_threshold
+            )
+            batch_mask.append(mask)
+        return np.asarray(batch_mask, np.int32)
+
+    def decode_image(self, pixel_scores, link_scores,
+                     pixel_conf_threshold, link_conf_threshold):
+        if config.decode_method == "DECODE_METHOD_join":
+            mask = self.decode_image_by_join(pixel_scores, link_scores,
+                                        pixel_conf_threshold, link_conf_threshold)
+            return mask
+        # elif config.decode_method == "DECODE_METHOD_border_split":
+        #     return decode_image_by_border(pixel_scores, link_scores,
+        #                                   pixel_conf_threshold, link_conf_threshold)
+        else:
+            raise ValueError('Unknow decode method:%s' % (config.decode_method))
 
 
-def process(pixel_pos_scores, link_pos_scores, img_shape, ratio, src_img_shape):
 
-    link_pos_scores = np.transpose(link_pos_scores, (0, 2, 3, 1))
+# @register_post_process
+# def pixel_link_process(outputs, img, ratio, src_img_shape):
+#     score = outputs[0]
+#
+#     shape = score.shape
+#     neighbor_num = int((shape[1] - 2) / 2)
+#     pixel_pos_scores = F.softmax(score[:, 0:2, :, :], dim=1)[:, 1, :, :]
+#     # pixel_pos_scores=torch.sigmoid(outputs[:,1,:,:])
+#     # FIXME the dimention should be changed
+#     link_scores = score[:, 2:, :, :].view(shape[0], 2, neighbor_num, shape[2], shape[3])
+#     link_pos_scores = F.softmax(link_scores, dim=1)[:, 1, :, :, :]
+#     # print(cords)
+#     pixel_pos_scores = pixel_pos_scores.cpu().numpy()
+#     link_pos_scores = link_pos_scores.cpu().numpy()
+#
+#     """ ratio 是根据已有的图片的缩放比例动态调整 """
+#
+#     return process(pixel_pos_scores, link_pos_scores, shape[2:], ratio, src_img_shape,)
 
-    mask = decode_batch(pixel_pos_scores, link_pos_scores)[0, ...]
-    bboxes = mask_to_bboxes(mask, img_shape)
-    cords = np.array(bboxes, dtype=np.float32)
-    cords *= 4
-    cords /= ratio
-    cords = cords.astype(np.int32)
 
-    # copy_pixel_pos_scores = np.squeeze(pixel_pos_scores)
-    # copy_pixel_pos_scores = np.where(copy_pixel_pos_scores > 0.5, 255, 0)
-    # savepath = os.path.join(vis_path, file_name + '_scoremap.png')
-    # cv2.imwrite(savepath, copy_pixel_pos_scores)
-    final_cords = []
-
-    if len(bboxes) > 0:
-        cords[:, 0::2] = np.clip(cords[:, 0::2], 0, src_img_shape[1] - 1)
-        cords[:, 1::2] = np.clip(cords[:, 1::2], 0, src_img_shape[0] - 1)
-        # final_cords = bboxes_to_quard(cords)
-
-    return cords, pixel_pos_scores, link_pos_scores, mask
+# def process(pixel_pos_scores, link_pos_scores, img_shape, ratio, src_img_shape):
+#
+#     link_pos_scores = np.transpose(link_pos_scores, (0, 2, 3, 1))
+#
+#     mask = decode_batch(pixel_pos_scores, link_pos_scores)[0, ...]
+#     bboxes = mask_to_bboxes(mask, img_shape)
+#     cords = np.array(bboxes, dtype=np.float32)
+#     cords *= 4
+#     cords /= ratio
+#     cords = cords.astype(np.int32)
+#
+#     # copy_pixel_pos_scores = np.squeeze(pixel_pos_scores)
+#     # copy_pixel_pos_scores = np.where(copy_pixel_pos_scores > 0.5, 255, 0)
+#     # savepath = os.path.join(vis_path, file_name + '_scoremap.png')
+#     # cv2.imwrite(savepath, copy_pixel_pos_scores)
+#     final_cords = []
+#
+#     if len(bboxes) > 0:
+#         cords[:, 0::2] = np.clip(cords[:, 0::2], 0, src_img_shape[1] - 1)
+#         cords[:, 1::2] = np.clip(cords[:, 1::2], 0, src_img_shape[0] - 1)
+#         # final_cords = bboxes_to_quard(cords)
+#
+#     return cords, pixel_pos_scores, link_pos_scores, mask
 
 
 def bboxes_to_quard(bboxes):
@@ -72,46 +160,42 @@ def bboxes_to_quard(bboxes):
     cords[:, 2] = bboxes[:, 0::2].max(axis=1)
     cords[:, 3] = bboxes[:, 1::2].max(axis=1)
     return cords
-
-def decode_batch(pixel_cls_scores, pixel_link_scores,
-                 pixel_conf_threshold=None, link_conf_threshold=None):
-
-    if pixel_conf_threshold is None:
-        pixel_conf_threshold = config.pixel_conf_threshold
-
-    if link_conf_threshold is None:
-        link_conf_threshold = config.link_conf_threshold
-
-
-    batch_size = pixel_cls_scores.shape[0]
-    batch_mask = []
-    for image_idx in range(batch_size):
-        image_pos_pixel_scores = pixel_cls_scores[image_idx, :, :]
-        image_pos_link_scores = pixel_link_scores[image_idx, :, :, :]
-        mask = decode_image(
-            image_pos_pixel_scores, image_pos_link_scores,
-            pixel_conf_threshold, link_conf_threshold
-        )
-        batch_mask.append(mask)
-    return np.asarray(batch_mask, np.int32)
-
-
-def decode_image(pixel_scores, link_scores,
-                 pixel_conf_threshold, link_conf_threshold):
-    if config.decode_method == "DECODE_METHOD_join":
-        mask = decode_image_by_join(pixel_scores, link_scores,
-                                    pixel_conf_threshold, link_conf_threshold)
-        return mask
-    # elif config.decode_method == "DECODE_METHOD_border_split":
-    #     return decode_image_by_border(pixel_scores, link_scores,
-    #                                   pixel_conf_threshold, link_conf_threshold)
-    else:
-        raise ValueError('Unknow decode method:%s' % (config.decode_method))
+#
+# def decode_batch(pixel_cls_scores, pixel_link_scores,
+#                  pixel_conf_threshold=None, link_conf_threshold=None):
+#
+#     if pixel_conf_threshold is None:
+#         pixel_conf_threshold = config.pixel_conf_threshold
+#
+#     if link_conf_threshold is None:
+#         link_conf_threshold = config.link_conf_threshold
+#
+#
+#     batch_size = pixel_cls_scores.shape[0]
+#     batch_mask = []
+#     for image_idx in range(batch_size):
+#         image_pos_pixel_scores = pixel_cls_scores[image_idx, :, :]
+#         image_pos_link_scores = pixel_link_scores[image_idx, :, :, :]
+#         mask = decode_image(
+#             image_pos_pixel_scores, image_pos_link_scores,
+#             pixel_conf_threshold, link_conf_threshold
+#         )
+#         batch_mask.append(mask)
+#     return np.asarray(batch_mask, np.int32)
 
 
-import pyximport
-pyximport.install()
-from .pixel_link_decode import decode_image_by_join
+# def decode_image(pixel_scores, link_scores,
+#                  pixel_conf_threshold, link_conf_threshold):
+#     if config.decode_method == "DECODE_METHOD_join":
+#         mask = decode_image_by_join(pixel_scores, link_scores,
+#                                     pixel_conf_threshold, link_conf_threshold)
+#         return mask
+#     # elif config.decode_method == "DECODE_METHOD_border_split":
+#     #     return decode_image_by_border(pixel_scores, link_scores,
+#     #                                   pixel_conf_threshold, link_conf_threshold)
+#     else:
+#         raise ValueError('Unknow decode method:%s' % (config.decode_method))
+
 
 
 def rect_to_xys(rect, image_shape):

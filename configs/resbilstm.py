@@ -48,7 +48,7 @@ config = dict(
     # 后处理分  todo: 后处理的默认参数设置。一个callable参数， 只给定部分参数
     post_process=dict(
         type='ctc_decoder',
-        vocab_path='../model_files/label_1009_vocab.txt',
+        vocab_path='/media/Data/hcn/project/pytorch_deeplearning/model_files/ocr/label_1009_vocab.txt',
         vocab_type='col',
         beam_search=True
     ),
@@ -79,7 +79,7 @@ config = dict(
     # parameters of continuing to train the model
     # epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     # continue_train=False,
-    load_models=['../model_files/epoch_6_150000_resctcmodel.pth'],
+    load_models=['/media/Data/hcn/project/pytorch_deeplearning/model_files/ocr/epoch_6_150000_resctcmodel.pth'],
 
     verbose=False,
     # print_freq=100,

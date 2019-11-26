@@ -48,92 +48,194 @@ def crop(img, bboxes):
 
 
 @register_post_process
-def c2td_process_horizon(outputs, img, file_name=None, thresh=0.8, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
-    """
+class c2td_process_horizon(object):
 
-    :param outputs: the output values from model. A dict.
-    :return:
-    """
-    out = outputs[0]  # 可能有多个输出，是一起送入到这里进行后处理的
-    out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
-    scores = out[:, :, 0]
+    def __init__(self, thresh=0.8):
+        self.thresh = thresh
 
-    scores_ori = scores.copy()
+    def __call__(self, outputs, img, filename=None):
+        """
 
-    scores[scores > 1.] = 1.
-    scores[scores < 0] = 0.
-    # 转换为 [0~255]
-    scores = scores*255
+           :param outputs: the output values from model. A dict.
+           :return:
+           """
+        out = outputs[0]  # 可能有多个输出，是一起送入到这里进行后处理的
+        out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
+        scores = out[:, :, 0]
 
-    # todo: 调试代码： 可视化激活
-    # cond = np.greater_equal(scores, 255*thresh)
-    # activation_pixels = np.where(cond)
-    # draw_activate(Image.fromarray(img), activation_pixels, file_name)
+        scores_ori = scores.copy()
 
-    # 或者这里可以先计算图片的梯度
-    # _, bin = cv2.threshold(scores, 125, 255, cv2.THRESH_BINARY)
-    # edges = cv2.Canny(scores.astype(np.uint8), 50, 150, apertureSize=3)
-    # lines = cv2.HoughLinesP(edges, 1,  np.pi / 180, 10, minLineLength=10, maxLineGap=1)
-    # for line in lines:
-    #     x1, y1, x2, y2 = line[0]*4
-    #     cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
-    # cv2.imwrite(os.path.join(save_path, file_name + '_line.png'), img)
+        scores[scores > 1.] = 1.
+        scores[scores < 0] = 0.
+        # 转换为 [0~255]
+        scores = scores * 255
 
-    _, bin = cv2.threshold(scores, 255*thresh, 255, cv2.THRESH_BINARY)
+        # todo: 调试代码： 可视化激活
+        # cond = np.greater_equal(scores, 255*thresh)
+        # activation_pixels = np.where(cond)
+        # draw_activate(Image.fromarray(img), activation_pixels, file_name)
 
-    # 为什么有的版本是返回是二个，有的是三个?
-    contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    # contours = list(filter(contour_filter, contours))
+        # 或者这里可以先计算图片的梯度
+        # _, bin = cv2.threshold(scores, 125, 255, cv2.THRESH_BINARY)
+        # edges = cv2.Canny(scores.astype(np.uint8), 50, 150, apertureSize=3)
+        # lines = cv2.HoughLinesP(edges, 1,  np.pi / 180, 10, minLineLength=10, maxLineGap=1)
+        # for line in lines:
+        #     x1, y1, x2, y2 = line[0]*4
+        #     cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+        # cv2.imwrite(os.path.join(save_path, file_name + '_line.png'), img)
 
-    # todo: 调试代码
-    # contours_4 = [c.copy()*4 for c in contours]
-    # img_contours = cv2.drawContours(img.copy(), contours_4, -1, (0, 0, 255), 2)  # 这个要乘以四
-    # cv2.imwrite(os.path.join(save_path, file_name + '_contours.png'), img_contours)
+        _, bin = cv2.threshold(scores, 255 * self.thresh, 255, cv2.THRESH_BINARY)
 
-    # img_rectangle = img.copy()
+        # 为什么有的版本是返回是二个，有的是三个?
+        try:
+            contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        except:
+            _, contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-    cords = []
-    for cnt in contours:
-        x, y, w, h = cv2.boundingRect(cnt)
+        # contours = list(filter(contour_filter, contours))
+
+        # todo: 调试代码
+        # contours_4 = [c.copy()*4 for c in contours]
+        # img_contours = cv2.drawContours(img.copy(), contours_4, -1, (0, 0, 255), 2)  # 这个要乘以四
+        # cv2.imwrite(os.path.join(save_path, file_name + '_contours.png'), img_contours)
+
+        # img_rectangle = img.copy()
+
+        cords = []
+        for cnt in contours:
+            x, y, w, h = cv2.boundingRect(cnt)
+
+            # todo 调试代码
+            # cv2.rectangle(img_rectangle, (x*4, y*4), ((x+w)*4, (y+h)*4),
+            #               color=[0, 0, 255], thickness=2)
+
+            # aspect_ratio = float(w) / h  # 不应该看矩形的宽高比， 应该按照最后的宽高比滤掉
+            # if aspect_ratio < 1:
+            #     continue
+            xmin = (x - 1.5) * 4  # 原来都是设置0.5
+            xmax = (x + w + 1.5) * 4
+
+            roi = scores_ori[y:y + h, x:x + w]
+            # 只看其中的部分像素的高和宽即可
+            cond = np.greater_equal(roi, 0.9)
+            regress_pixel = np.where(cond)
+            if len(regress_pixel[0]) == 0:
+                cond = np.greater_equal(roi, 0.8)  # 再降低一次
+                regress_pixel = np.where(cond)
+            top = 0
+            down = 0
+            for i, j in zip(regress_pixel[0], regress_pixel[1]):
+                j = j + x
+                i = i + y
+                py = (i + 0.5) * 4
+                top += py + out[i, j, 1]
+                down += py + out[i, j, 2]
+
+            if len(regress_pixel[0]) > 0:
+                ave_top = top / len(regress_pixel[0])
+                ave_down = down / len(regress_pixel[1])
+                cords.append((xmin, ave_top, xmax, ave_down))
+
+        # 滤除噪音
+        cords = list(filter(lambda cord: (cord[2] - cord[0]) / (cord[3] - cord[1] + 1) > 1.8, cords))
 
         # todo 调试代码
-        # cv2.rectangle(img_rectangle, (x*4, y*4), ((x+w)*4, (y+h)*4),
-        #               color=[0, 0, 255], thickness=2)
+        # cv2.imwrite(os.path.join(save_path, file_name + '_rectangle.png'), img_rectangle)
+        img_patches, cords = crop(img, cords)
+        return img_patches, cords
 
-        # aspect_ratio = float(w) / h  # 不应该看矩形的宽高比， 应该按照最后的宽高比滤掉
-        # if aspect_ratio < 1:
-        #     continue
-        xmin = (x-1.5) * 4   # 原来都是设置0.5
-        xmax = (x+w+1.5) * 4
 
-        roi = scores_ori[y:y+h, x:x+w]
-        # 只看其中的部分像素的高和宽即可
-        cond = np.greater_equal(roi, 0.9)
-        regress_pixel = np.where(cond)
-        if len(regress_pixel[0]) == 0:
-            cond = np.greater_equal(roi, 0.8)  # 再降低一次
-            regress_pixel = np.where(cond)
-        top = 0
-        down = 0
-        for i, j in zip(regress_pixel[0], regress_pixel[1]):
-            j = j + x
-            i = i + y
-            py = (i + 0.5) * 4
-            top += py + out[i, j, 1]
-            down += py + out[i, j, 2]
-
-        if len(regress_pixel[0]) > 0:
-            ave_top = top/len(regress_pixel[0])
-            ave_down = down/len(regress_pixel[1])
-            cords.append((xmin, ave_top, xmax, ave_down))
-
-    # 滤除噪音
-    cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 1.8, cords))
-
-    # todo 调试代码
-    # cv2.imwrite(os.path.join(save_path, file_name + '_rectangle.png'), img_rectangle)
-    img_patches, cords = crop(img, cords)
-    return img_patches, cords
+# @register_post_process
+# def c2td_process_horizon(outputs, img, file_name=None, thresh=0.8, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
+#     """
+#
+#     :param outputs: the output values from model. A dict.
+#     :return:
+#     """
+#     out = outputs[0]  # 可能有多个输出，是一起送入到这里进行后处理的
+#     out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
+#     scores = out[:, :, 0]
+#
+#     scores_ori = scores.copy()
+#
+#     scores[scores > 1.] = 1.
+#     scores[scores < 0] = 0.
+#     # 转换为 [0~255]
+#     scores = scores*255
+#
+#     # todo: 调试代码： 可视化激活
+#     # cond = np.greater_equal(scores, 255*thresh)
+#     # activation_pixels = np.where(cond)
+#     # draw_activate(Image.fromarray(img), activation_pixels, file_name)
+#
+#     # 或者这里可以先计算图片的梯度
+#     # _, bin = cv2.threshold(scores, 125, 255, cv2.THRESH_BINARY)
+#     # edges = cv2.Canny(scores.astype(np.uint8), 50, 150, apertureSize=3)
+#     # lines = cv2.HoughLinesP(edges, 1,  np.pi / 180, 10, minLineLength=10, maxLineGap=1)
+#     # for line in lines:
+#     #     x1, y1, x2, y2 = line[0]*4
+#     #     cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+#     # cv2.imwrite(os.path.join(save_path, file_name + '_line.png'), img)
+#
+#     _, bin = cv2.threshold(scores, 255*thresh, 255, cv2.THRESH_BINARY)
+#
+#     # 为什么有的版本是返回是二个，有的是三个?
+#     try:
+#         contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+#     except:
+#         _, contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+#
+#     # contours = list(filter(contour_filter, contours))
+#
+#     # todo: 调试代码
+#     # contours_4 = [c.copy()*4 for c in contours]
+#     # img_contours = cv2.drawContours(img.copy(), contours_4, -1, (0, 0, 255), 2)  # 这个要乘以四
+#     # cv2.imwrite(os.path.join(save_path, file_name + '_contours.png'), img_contours)
+#
+#     # img_rectangle = img.copy()
+#
+#     cords = []
+#     for cnt in contours:
+#         x, y, w, h = cv2.boundingRect(cnt)
+#
+#         # todo 调试代码
+#         # cv2.rectangle(img_rectangle, (x*4, y*4), ((x+w)*4, (y+h)*4),
+#         #               color=[0, 0, 255], thickness=2)
+#
+#         # aspect_ratio = float(w) / h  # 不应该看矩形的宽高比， 应该按照最后的宽高比滤掉
+#         # if aspect_ratio < 1:
+#         #     continue
+#         xmin = (x-1.5) * 4   # 原来都是设置0.5
+#         xmax = (x+w+1.5) * 4
+#
+#         roi = scores_ori[y:y+h, x:x+w]
+#         # 只看其中的部分像素的高和宽即可
+#         cond = np.greater_equal(roi, 0.9)
+#         regress_pixel = np.where(cond)
+#         if len(regress_pixel[0]) == 0:
+#             cond = np.greater_equal(roi, 0.8)  # 再降低一次
+#             regress_pixel = np.where(cond)
+#         top = 0
+#         down = 0
+#         for i, j in zip(regress_pixel[0], regress_pixel[1]):
+#             j = j + x
+#             i = i + y
+#             py = (i + 0.5) * 4
+#             top += py + out[i, j, 1]
+#             down += py + out[i, j, 2]
+#
+#         if len(regress_pixel[0]) > 0:
+#             ave_top = top/len(regress_pixel[0])
+#             ave_down = down/len(regress_pixel[1])
+#             cords.append((xmin, ave_top, xmax, ave_down))
+#
+#     # 滤除噪音
+#     cords = list(filter(lambda cord: (cord[2] - cord[0])/(cord[3]-cord[1]+1) > 1.8, cords))
+#
+#     # todo 调试代码
+#     # cv2.imwrite(os.path.join(save_path, file_name + '_rectangle.png'), img_rectangle)
+#     img_patches, cords = crop(img, cords)
+#     return img_patches, cords
 
 
 def convert_cord(point, out):
@@ -280,101 +382,208 @@ def affine_deform(cords, img):
 
 
 @register_post_process
-def c2td_process(outputs, img, file_name=None, thresh=0.8, sample_ratio=1, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
-    out = outputs[0]  # 可能有多个输出，是一起送入到这里进行后处理的
-    out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
+class c2td_process(object):
 
-    scores = out[:, :, 0]
-    scores_ori = scores.copy()
-    # convert scores to [0, 255]
-    scores[scores > 1.] = 1.
-    scores[scores < 0] = 0.
-    scores = scores * 255
+    def __init__(self, thresh=0.8):
+        self.thresh = thresh
 
-    # todo: 调试代码： 可视化激活
-    # cond = np.greater_equal(scores, 255 * thresh)
-    # activation_pixels = np.where(cond)
-    # draw_activate(Image.fromarray(img), activation_pixels, file_name)
-    _, bin = cv2.threshold(scores, 255 * thresh, 255, cv2.THRESH_BINARY)
-    _,contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
-    curved_boxes = []
-    rectangle_boxes = []
-    for cnt in contours:
-        # cnt: n_point*1*2
-        cnt = np.squeeze(cnt, axis=1)
-        leftmost = cnt[cnt[:, 0].argmin()][0]
-        rightmost = cnt[cnt[:, 0].argmax()][0]
-        top_point = cnt[cnt[:, 1].argmin()]
-        topmost = top_point[1]
-        bottom_point = cnt[cnt[:, 1].argmax()]
-        bottommost = bottom_point[1]
-        # len_x = rightmost - leftmost + 1
-        # whether the text is needed to be corrected?
-        # choose an appropriate sample ratio for the text line
-        height = bottommost - topmost + 1
-        step = int(height * sample_ratio)
-        # convert the height to real height
-        real_height = cal_height(top_point, bottom_point, out)
-        sampled_x = list(range(leftmost, rightmost + 1, step))
-        if len(sampled_x) < 3:
-            # the text line is too short, we do not perform deform. Save this to a list
-            cords = process_horizon(cnt, out, scores_ori)
-            if cords is not None:
-                rectangle_boxes.append(cords)
-            continue
-        # add the the last point at the edge
-        if rightmost - sampled_x[-1] > 0:
-            sampled_x.append(rightmost)
-        # calculate ave_sample_height
-        sampled_x_dict = {x: [] for x in sampled_x}
-        for i in range(0, len(cnt)):  # cnt只是边缘的点
-            cur_x = cnt[i, 0]
-            cur_y = cnt[i, 1]
-            if sampled_x_dict.get(cur_x) is not None:
-                sampled_x_dict.get(cur_x).append(cur_y)
-        # inplace sort
-        for key in sampled_x_dict.keys():
-            sampled_x_dict[key].sort()
-        ave_sample_height = 0
-        for x in sampled_x_dict.keys():
-            min_y = sampled_x_dict[x][0]
-            max_y = sampled_x_dict[x][-1]
-            sample_height = cal_height((x, min_y), (x, max_y), out)
-            ave_sample_height += sample_height
-        ave_sample_height = ave_sample_height / len(sampled_x_dict)
-        if (real_height / ave_sample_height + 1e-4) < 1.2:  # todo 阈值，判断是否需要校正，需考虑合理性. 越小的值，校正的越多
-            cords = process_horizon(cnt, out, scores_ori)
-            if cords is not None:
-                rectangle_boxes.append(cords)
-            continue
-        cords = []  # 一行的N个坐标点
-        for x in sampled_x_dict.keys():
-            min_y = sampled_x_dict[x][0]
-            max_y = sampled_x_dict[x][-1]
-            top = 0
-            down = 0
-            for y in range(min_y, max_y + 1):
-                py = (y + 0.5) * 4
-                top += py + out[y, x, 1]
-                down += py + out[y, x, 2]
-            ave_top = top / (max_y - min_y + 1)
-            ave_down = down / (max_y - min_y + 1)
-            cords.append([int((x + 0.5) * 4), int(ave_top - 4)])
-            cords.append([int((x + 0.5) * 4), int(ave_down + 4)])
-        # expand left and right by 4 pixel  一共要扩充四个点。 如果后面坐了横向的text_moutain 说不定就不需要了
-        cords = expand_curved_boxes(cords)
-        curved_boxes.append(cords)
-    # todo 调试代码 画关键点
-    # img_keypoints = img.copy()
-    # for boxes in curved_boxes:
-    #     for point in boxes:
-    #         draw_cross(img_keypoints, point)
-    # cv2.imwrite(os.path.join(save_path, file_name + '_keypoint.png'), img_keypoints)
+    def __call__(self, outputs, img, filename=None, sample_ratio=1):
+        out = outputs[0]  # 可能有多个输出，是一起送入到这里进行后处理的
+        out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
 
-    img_patches, rectangle_boxes = crop(img, rectangle_boxes)
+        scores = out[:, :, 0]
+        scores_ori = scores.copy()
+        # convert scores to [0, 255]
+        scores[scores > 1.] = 1.
+        scores[scores < 0] = 0.
+        scores = scores * 255
 
-    correct_patches = []
-    for ii, cords in enumerate(curved_boxes):
-        line = affine_deform(cords, img)
-        correct_patches.append(line)
-    return img_patches + correct_patches, rectangle_boxes + curved_boxes
+        # todo: 调试代码： 可视化激活
+        # cond = np.greater_equal(scores, 255 * thresh)
+        # activation_pixels = np.where(cond)
+        # draw_activate(Image.fromarray(img), activation_pixels, file_name)
+        _, bin = cv2.threshold(scores, 255 * self.thresh, 255, cv2.THRESH_BINARY)
+        _, contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        curved_boxes = []
+        rectangle_boxes = []
+        for cnt in contours:
+            # cnt: n_point*1*2
+            cnt = np.squeeze(cnt, axis=1)
+            leftmost = cnt[cnt[:, 0].argmin()][0]
+            rightmost = cnt[cnt[:, 0].argmax()][0]
+            top_point = cnt[cnt[:, 1].argmin()]
+            topmost = top_point[1]
+            bottom_point = cnt[cnt[:, 1].argmax()]
+            bottommost = bottom_point[1]
+            # len_x = rightmost - leftmost + 1
+            # whether the text is needed to be corrected?
+            # choose an appropriate sample ratio for the text line
+            height = bottommost - topmost + 1
+            step = int(height * sample_ratio)
+            # convert the height to real height
+            real_height = cal_height(top_point, bottom_point, out)
+            sampled_x = list(range(leftmost, rightmost + 1, step))
+            if len(sampled_x) < 3:
+                # the text line is too short, we do not perform deform. Save this to a list
+                cords = process_horizon(cnt, out, scores_ori)
+                if cords is not None:
+                    rectangle_boxes.append(cords)
+                continue
+            # add the the last point at the edge
+            if rightmost - sampled_x[-1] > 0:
+                sampled_x.append(rightmost)
+            # calculate ave_sample_height
+            sampled_x_dict = {x: [] for x in sampled_x}
+            for i in range(0, len(cnt)):  # cnt只是边缘的点
+                cur_x = cnt[i, 0]
+                cur_y = cnt[i, 1]
+                if sampled_x_dict.get(cur_x) is not None:
+                    sampled_x_dict.get(cur_x).append(cur_y)
+            # inplace sort
+            for key in sampled_x_dict.keys():
+                sampled_x_dict[key].sort()
+            ave_sample_height = 0
+            for x in sampled_x_dict.keys():
+                min_y = sampled_x_dict[x][0]
+                max_y = sampled_x_dict[x][-1]
+                sample_height = cal_height((x, min_y), (x, max_y), out)
+                ave_sample_height += sample_height
+            ave_sample_height = ave_sample_height / len(sampled_x_dict)
+            if (real_height / ave_sample_height + 1e-4) < 1.2:  # todo 阈值，判断是否需要校正，需考虑合理性. 越小的值，校正的越多
+                cords = process_horizon(cnt, out, scores_ori)
+                if cords is not None:
+                    rectangle_boxes.append(cords)
+                continue
+            cords = []  # 一行的N个坐标点
+            for x in sampled_x_dict.keys():
+                min_y = sampled_x_dict[x][0]
+                max_y = sampled_x_dict[x][-1]
+                top = 0
+                down = 0
+                for y in range(min_y, max_y + 1):
+                    py = (y + 0.5) * 4
+                    top += py + out[y, x, 1]
+                    down += py + out[y, x, 2]
+                ave_top = top / (max_y - min_y + 1)
+                ave_down = down / (max_y - min_y + 1)
+                cords.append([int((x + 0.5) * 4), int(ave_top - 4)])
+                cords.append([int((x + 0.5) * 4), int(ave_down + 4)])
+            # expand left and right by 4 pixel  一共要扩充四个点。 如果后面坐了横向的text_moutain 说不定就不需要了
+            cords = expand_curved_boxes(cords)
+            curved_boxes.append(cords)
+        # todo 调试代码 画关键点
+        # img_keypoints = img.copy()
+        # for boxes in curved_boxes:
+        #     for point in boxes:
+        #         draw_cross(img_keypoints, point)
+        # cv2.imwrite(os.path.join(save_path, file_name + '_keypoint.png'), img_keypoints)
+
+        img_patches, rectangle_boxes = crop(img, rectangle_boxes)
+
+        correct_patches = []
+        for ii, cords in enumerate(curved_boxes):
+            line = affine_deform(cords, img)
+            correct_patches.append(line)
+        return img_patches + correct_patches, rectangle_boxes + curved_boxes
+
+
+
+# @register_post_process
+# def c2td_process(outputs, img, file_name=None, thresh=0.8, sample_ratio=1, save_path='/media/Data/wangjunjie_code/pytorch_text_detection/demo_results/'):
+#     out = outputs[0]  # 可能有多个输出，是一起送入到这里进行后处理的
+#     out = out.permute(0, 2, 3, 1).squeeze().cpu().numpy()  # h*w*3
+#
+#     scores = out[:, :, 0]
+#     scores_ori = scores.copy()
+#     # convert scores to [0, 255]
+#     scores[scores > 1.] = 1.
+#     scores[scores < 0] = 0.
+#     scores = scores * 255
+#
+#     # todo: 调试代码： 可视化激活
+#     # cond = np.greater_equal(scores, 255 * thresh)
+#     # activation_pixels = np.where(cond)
+#     # draw_activate(Image.fromarray(img), activation_pixels, file_name)
+#     _, bin = cv2.threshold(scores, 255 * thresh, 255, cv2.THRESH_BINARY)
+#     _,contours, hierarchy = cv2.findContours(bin.astype(np.uint8), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+#     curved_boxes = []
+#     rectangle_boxes = []
+#     for cnt in contours:
+#         # cnt: n_point*1*2
+#         cnt = np.squeeze(cnt, axis=1)
+#         leftmost = cnt[cnt[:, 0].argmin()][0]
+#         rightmost = cnt[cnt[:, 0].argmax()][0]
+#         top_point = cnt[cnt[:, 1].argmin()]
+#         topmost = top_point[1]
+#         bottom_point = cnt[cnt[:, 1].argmax()]
+#         bottommost = bottom_point[1]
+#         # len_x = rightmost - leftmost + 1
+#         # whether the text is needed to be corrected?
+#         # choose an appropriate sample ratio for the text line
+#         height = bottommost - topmost + 1
+#         step = int(height * sample_ratio)
+#         # convert the height to real height
+#         real_height = cal_height(top_point, bottom_point, out)
+#         sampled_x = list(range(leftmost, rightmost + 1, step))
+#         if len(sampled_x) < 3:
+#             # the text line is too short, we do not perform deform. Save this to a list
+#             cords = process_horizon(cnt, out, scores_ori)
+#             if cords is not None:
+#                 rectangle_boxes.append(cords)
+#             continue
+#         # add the the last point at the edge
+#         if rightmost - sampled_x[-1] > 0:
+#             sampled_x.append(rightmost)
+#         # calculate ave_sample_height
+#         sampled_x_dict = {x: [] for x in sampled_x}
+#         for i in range(0, len(cnt)):  # cnt只是边缘的点
+#             cur_x = cnt[i, 0]
+#             cur_y = cnt[i, 1]
+#             if sampled_x_dict.get(cur_x) is not None:
+#                 sampled_x_dict.get(cur_x).append(cur_y)
+#         # inplace sort
+#         for key in sampled_x_dict.keys():
+#             sampled_x_dict[key].sort()
+#         ave_sample_height = 0
+#         for x in sampled_x_dict.keys():
+#             min_y = sampled_x_dict[x][0]
+#             max_y = sampled_x_dict[x][-1]
+#             sample_height = cal_height((x, min_y), (x, max_y), out)
+#             ave_sample_height += sample_height
+#         ave_sample_height = ave_sample_height / len(sampled_x_dict)
+#         if (real_height / ave_sample_height + 1e-4) < 1.2:  # todo 阈值，判断是否需要校正，需考虑合理性. 越小的值，校正的越多
+#             cords = process_horizon(cnt, out, scores_ori)
+#             if cords is not None:
+#                 rectangle_boxes.append(cords)
+#             continue
+#         cords = []  # 一行的N个坐标点
+#         for x in sampled_x_dict.keys():
+#             min_y = sampled_x_dict[x][0]
+#             max_y = sampled_x_dict[x][-1]
+#             top = 0
+#             down = 0
+#             for y in range(min_y, max_y + 1):
+#                 py = (y + 0.5) * 4
+#                 top += py + out[y, x, 1]
+#                 down += py + out[y, x, 2]
+#             ave_top = top / (max_y - min_y + 1)
+#             ave_down = down / (max_y - min_y + 1)
+#             cords.append([int((x + 0.5) * 4), int(ave_top - 4)])
+#             cords.append([int((x + 0.5) * 4), int(ave_down + 4)])
+#         # expand left and right by 4 pixel  一共要扩充四个点。 如果后面坐了横向的text_moutain 说不定就不需要了
+#         cords = expand_curved_boxes(cords)
+#         curved_boxes.append(cords)
+#     # todo 调试代码 画关键点
+#     # img_keypoints = img.copy()
+#     # for boxes in curved_boxes:
+#     #     for point in boxes:
+#     #         draw_cross(img_keypoints, point)
+#     # cv2.imwrite(os.path.join(save_path, file_name + '_keypoint.png'), img_keypoints)
+#
+#     img_patches, rectangle_boxes = crop(img, rectangle_boxes)
+#
+#     correct_patches = []
+#     for ii, cords in enumerate(curved_boxes):
+#         line = affine_deform(cords, img)
+#         correct_patches.append(line)
+#     return img_patches + correct_patches, rectangle_boxes + curved_boxes

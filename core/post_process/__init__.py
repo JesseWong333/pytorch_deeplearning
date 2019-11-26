@@ -1,6 +1,5 @@
 import os
 import importlib
-import torch.nn as nn
 import types
 
 """
@@ -34,8 +33,12 @@ def register_post_process(cls):
     return cls
 
 
+
 # automatically import any Python files in the directory. while import the python file, register methods called
 for file in os.listdir(os.path.dirname(__file__)):
     if file.endswith('.py') and not file.startswith('_'):
         module = file[:file.find('.py')]
         importlib.import_module('core.post_process.' + module)
+
+
+

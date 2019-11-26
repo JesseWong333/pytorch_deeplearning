@@ -23,7 +23,7 @@ which is developed for fast implementation, research and deploy
 - [ ] ~~feature: backbone支持函数返回model~~
 - [ ] 通用的流程 pipe_line抽象, 如：检测+识别，添加服务代码
 - [X] visdom训练loss可视化，以及结果的可视化. 代码中启动visdom, 不能手动启动visdom
-- [X] 支持训练时评估：从dataset 和 临时的文件夹。 需要可配置是否使用
+- [ ] 支持训练时评估：从dataset 和 临时的文件夹。 需要可配置是否使用
 - [ ] 提供lmdb, HDF5数据库的通用读写工具、模板代码
 - [ ] 提供已经deploy ready 的模型的Tensor RT转换工具, 模板代码
 - [ ] DataParallel之外的，高效的多卡分布式训练。pytorch自带的及第三方的
@@ -69,9 +69,7 @@ hcn
 
 Jesse Wong
 - visdom子进程启动。可视化显示loss. 等待"支持训练时评估"功能完成后，接入更多的可视化展示
-
-
 hzc
 - 增加OCR通用识别模型， 检测，识别dataset
 - 训练预处理可配置pipe_line (常用预处理操作)
-- 增加evaluators模块供训练时评估
+- 增加evaluators模块供训练时评估 (目前支持dataset的, 临时文件夹评估待完成)

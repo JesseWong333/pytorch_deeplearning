@@ -90,7 +90,7 @@ if __name__ == '__main__':
     pipeline = OCRPipeLine()
 
     img_base_path = '/media/Data/hcn/data/C2TD_TEST/problem'
-    save_path = '/media/Data/hcn/data/C2TD_TEST/problem_resnet_5-8-17-3'
+    save_path = '/media/Data/hzc/code/pytorch_deeplearning/tmp_1126'
 
     imgpaths = glob.glob(os.path.join(img_base_path, '*.png'))
 
