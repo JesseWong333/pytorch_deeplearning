@@ -12,7 +12,9 @@ from PIL import Image
 def c2td_preprocess(img):
     h, w, _ = img.shape
     # 检测填充
-    img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
+    img = np.pad(img, ((0, 32 - h % 32), (0, 32 - w % 32), (0, 0)), 'constant', constant_values=255)  # 填充到32的倍数
+    img = img.astype(np.float32)
+    img -= 127.5
     return img
 
 @register_pre_process
@@ -22,7 +24,7 @@ def reg_preprocess(img):
     :param img:
     :return:
     """
-    nh = 32
+    nh = 32  # todo magic number
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     h, w = gray_img.shape
     nw = int(nh * w / h)

@@ -75,22 +75,22 @@ class TextDetectionDataset(data.Dataset):
         # return np.concatenate(imgs, axis=0), np.concatenate(heat_maps, axis=0)
 
 
-if __name__ == '__main__':
-    import torch
-
-    save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/visualise'
-
-    class Opt():
-        dataroot = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
-    opt = Opt()
-
-    data_loader = torch.utils.data.DataLoader(
-        ImageLine2Dataset(opt), shuffle=False, batch_size=1, num_workers=1,
-        collate_fn=ImageLine2Dataset.collate_fn)
-    # 注意这样得到的通道数在最后，默认的
-    for ii, (image, heatmap) in enumerate(data_loader):
-        image = np.squeeze(image, axis=0)
-        image = image.transpose((1, 2, 0))
-        new_im = image.copy()
-        # new_im = new_im.astype(np.uint8)
-        print(ii)
+# if __name__ == '__main__':
+#     import torch
+#
+#     save_path = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/visualise'
+#
+#     class Opt():
+#         dataroot = '/media/Data/wangjunjie_code/pytorch_text_detection/datasets/'
+#     opt = Opt()
+#
+#     data_loader = torch.utils.data.DataLoader(
+#         ImageLine2Dataset(opt), shuffle=False, batch_size=1, num_workers=1,
+#         collate_fn=ImageLine2Dataset.collate_fn)
+#     # 注意这样得到的通道数在最后，默认的
+#     for ii, (image, heatmap) in enumerate(data_loader):
+#         image = np.squeeze(image, axis=0)
+#         image = image.transpose((1, 2, 0))
+#         new_im = image.copy()
+#         # new_im = new_im.astype(np.uint8)
+#         print(ii)

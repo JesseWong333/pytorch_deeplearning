@@ -1,15 +1,17 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from . import register_loss
 
 
-class CentreLineLoss(nn.Module):
+@register_loss
+class CentreLineWeightLoss(nn.Module):
     """
     预测中心线， 并且在中心线上回归
     中心线使用山峰的方式
     """
     def __init__(self, thresh=0.5, neg_pos=3):
-        super(CentreLineLoss, self).__init__()
+        super(CentreLineWeightLoss, self).__init__()
         self.thresh = thresh
         self.negpos_ratio = neg_pos
         # self.l1Loss = nn.SmoothL1Loss()
@@ -25,8 +27,8 @@ class CentreLineLoss(nn.Module):
         :param y_pred:
         :return:
         """
+        y_pred = y_pred.permute(0, 2, 3, 1)
         batch_size, h, w, _ = y_true.shape
-
         labels = y_true[:, :, :, 0]
         logits = y_pred[:, :, :, 0]
         pixel_cls_weight = y_true[:, :, :, 3]

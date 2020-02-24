@@ -9,6 +9,36 @@ import torch
 import numpy as np
 import PIL
 from PIL import Image, ImageFont, Image, ImageDraw
+import editdistance
+import re
+from hanziconv import HanziConv
+
+
+def normalize_txt(st):
+  """
+  Normalize Chinese text strings by:
+    - remove puncutations and other symbols
+    - convert traditional Chinese to simplified
+    - convert English chraacters to lower cases
+  """
+  st = ''.join(st.split(' '))
+  st = re.sub("\"","",st)
+  # remove any this not one of Chinese character, ascii 0-9, and ascii a-z and A-Z
+  new_st = re.sub(r'[^\u4e00-\u9fa5\u0041-\u005a\u0061-\u007a0-9]+','',st)
+  # convert Traditional Chinese to Simplified Chinese
+  new_st = HanziConv.toSimplified(new_st)
+  # convert uppercase English letters to lowercase
+  new_st = new_st.lower()
+  return new_st
+
+
+def text_distance(s1, s2):
+    str1 = normalize_txt(s1)
+    str2 = normalize_txt(s2)
+    ed = editdistance.eval(str1, str2)
+    l = max(len(str1), len(str2))
+    ned = ed / l if l > 0 else 0
+    return ed, ned
 
 
 @register_evaluator
@@ -34,7 +64,7 @@ class TextRecognitionEvaluator(object):
         model.eval()
         if self.vis_flag and not osp.exists(self.vis_path):
             os.makedirs(self.vis_path)
-        total, correct = 0, 0
+        total, correct, total_ed, total_ned = 0, 0, 0.0, 0.0
         with torch.no_grad():
             for i, data in enumerate(test_loader):
                 model.set_input(data)
@@ -47,12 +77,16 @@ class TextRecognitionEvaluator(object):
                     pred, text, filename = preds_str[_].strip(), cpu_text[_].strip(), filenames[_]
                     pred = ''.join(pred.split())
                     text = ''.join(text.split())
+                    ed, ned = text_distance(text, pred)
+                    total_ed += ed
+                    total_ned += ned
                     if text == pred:
                         correct += 1
                     # print(pred, text)
                     if self.vis_flag:
                         self.visualize(filename, pred, text)
-            msg = "correct / total : %d / %d, acc: %.4f" % (correct, total, correct / total)
+            msg = "correct / total : %d / %d, acc: %.4f, avg_ed: %.4f, normalized_ed: %.4f" % \
+                  (correct, total, correct / total, total_ed / total, 1 - total_ned / total)
             print(msg)
             # model.save_log(msg)
         model.train()

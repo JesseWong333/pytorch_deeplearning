@@ -69,7 +69,7 @@ config = dict(
     #
     batch_size=2,
     num_threads=5,
-    gpu_ids=[2],
+    gpu_ids=[3],
 
     # parameters of lr scheduler.
     lr=0.001,
@@ -82,7 +82,7 @@ config = dict(
 
     # parameters of continuing to train the model
     epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
-    continue_train=False,
+    continue_train=True,
     # load_models=['../model_files/epoch_99_pixellinkmodel.pth'],
     load_models=['/home/chen/hcn/project/pytorch_deeplearning/checkpoints/pixel_link/latest_net_net.pth'],
 

@@ -42,7 +42,7 @@ class CentreLineLoss(nn.Module):
         loss_c = torch.abs(labels-logits)
         loss_c[pos] = 0.
         loss_c = loss_c.view(batch_size, -1)
-        _, loss_idx = loss_c.sort(1, descending=True)   # 我也不知道写的啥，但我照着写了
+        _, loss_idx = loss_c.sort(1, descending=True)   # 这里是取了预测跟label差得多的neg样本，做为负样本
         _, idx_rank = loss_idx.sort(1)  # ???, 怎么还排序了???
         num_neg = torch.clamp(self.negpos_ratio * num_pos, max=loss_c.size(1) - 1)
         neg = idx_rank < num_neg.expand_as(idx_rank)

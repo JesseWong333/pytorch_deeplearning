@@ -27,7 +27,7 @@ def load_annoataion(p):
 
 def load_annoataion_quard(p):
     bbox = []
-    with open(p, "r") as f:
+    with open(p, "r",encoding='utf-8') as f:
         lines = f.readlines()
     for line in lines:
         line = line.strip().split(",")[:4]
@@ -55,7 +55,7 @@ def cal_bbox(x_min, y_min, x_max, y_max, bboxs):
         # 宽度判断
         in_xmin = max(0, c_xmin)
         in_xmax = min(x_max-x_min, c_xmax)
-        if in_xmax - in_xmin < tol_pix_w:  # 小于0完全在外面
+        if in_xmax - in_xmin < (tol_pix_w/2):  # 小于0完全在外面
             continue
 
         if c_xmin < 0:

@@ -12,8 +12,12 @@ import torchvision.transforms.functional as F
 import operator
 from PIL import ImageDraw, Image, ImageFont
 from tools import InferModel
+from utils.bboxes_utils import process_bboxes
+from utils.images_utils import maybe_resize
+from utils.skew_correct import correct_image
+from utils.bboxes_utils import sort_boxes
+import glob
 from utils.config_util import ConfigDict
-
 
 """
 检测 + 识别 pipeline
@@ -21,43 +25,6 @@ pipeline 要抽象吗？ 使用多线程机制
 用于连接起来测试
 -- 这样写完全还是一团糟~~
 """
-
-
-# 重新写的一个简要的可视化，并没有很好的考虑排序，重叠的问题
-def visualize(img, bounding_boxes, labellist, img_patches, font, file_name, save_path):
-    h, w, _ = img.shape
-
-    ori_img = Image.fromarray(img)
-    ori_img = ori_img.convert('RGB')
-
-    newimg = Image.new('RGB', (int(w * 3.3), int(h * 1.2)), (225, 225, 225))
-    newimg.paste(ori_img, (0, 0))
-
-    txt_draw = ImageDraw.Draw(newimg)
-
-    for cords, text, img_patch in zip(bounding_boxes, labellist, img_patches):
-        # 传出的接口没有统一
-        if isinstance(cords, list):
-            xmin, ymin = cords[0]
-            cords_top = cords[0:-1:2]
-            cords_down = cords[-1:0:-2]  # 要逆序
-            cords_sorted = cords_top + cords_down + [[xmin, ymin]]
-            cords_sorted = [(cord[0], cord[1]) for cord in cords_sorted]
-            txt_draw.line(cords_sorted, width=2, fill='blue')
-        else:
-            xmin, ymin = cords[0:2]
-            xmax, ymax = cords[2:4]
-            txt_draw.line([(xmin, ymin),
-                           (xmax, ymin),
-                           (xmax, ymax),
-                           (xmin, ymax),
-                           (xmin, ymin)], width=2, fill='red')
-
-        txt_draw.text((xmin+2*w, ymin), text, fill=6, font=font)
-        img_patch = Image.fromarray(img_patch).convert('RGB')
-        newimg.paste(img_patch, (xmin+w, ymin))
-    newimg.save(os.path.join(save_path, file_name + '.png'))
-
 
 class OCRPipeLine(object):
     def __init__(self, ):
@@ -67,38 +34,46 @@ class OCRPipeLine(object):
 
         c2td_args = ConfigDict(c2td_config)
         c2td_args.isTrain = False
-        # crnn_args = ConfigDict(crnn_config)
-        # crnn_args.isTrain = False
         resbilstm_args = ConfigDict(resbilstm_config)
         resbilstm_args.isTrain = False
 
-        self.det_model = InferModel(c2td_args)
-        # self.crnn_model = InferModel(crnn_args)
-        self.reg_model = InferModel(resbilstm_args)
+        self.det_model = InferModel(c2td_args) # 检测模型
+        self.reg_model = InferModel(resbilstm_args) #识别模型
+
+    def one_image_reg(self, img, boxes, subject):
+        labellist = []
+        for box in boxes:
+            imgcrop = img[int(box[1]):int(box[3]), int(box[0]):int(box[2])]
+            label = self.reg_model.infer(imgcrop, subject=subject)
+            labellist.append(label)
+        return labellist
 
     def infer(self, img):#单个例子的
-        # h, w, _ = img.shape
-        # 检测填充
-        # img = np.pad(img, ((0, 16 - h % 16), (0, 16 - w % 16), (0, 0)), 'constant', constant_values=255)  # 填充到16的倍数
-        img_patches, bounding_boxes = self.det_model.infer(img)  # 如果是扭曲的，这里应该是返回校正后的图片，为了接口统一，检测统一返回校正后的图片
+        src_img = img.copy()
+        img, ratio = maybe_resize(img, 3000) #对图片做resize
+        boxes_coord = self.det_model.infer(img, ratio=ratio, src_img_shape=src_img.shape)  # 如果是扭曲的，这里应该是返回校正后的图片，为了接口统一，检测统一返回校正后的图片
+        labellist = []
+        new_boxs = []
+        # print(boxes_coord)
+        for box in boxes_coord:  # 是否可以并行
+            imgcrop = src_img[int(box[1]):int(box[3]), int(box[0]):int(box[2])]
+            label = self.reg_model.infer(imgcrop, subject='历史')
+            # if len(label) > 0:
+            labellist.append(label)
+                # new_boxs.append(box)
 
-        nh = 32  # todo magic number
-        texts = []
-        for img_patch in img_patches:  # 是否可以并行
-            # 这个版本的crnn要求高度为32的灰度图, 且需要进行输入图片的归一化
-            # gray_patch = cv2.cvtColor(img_patch, cv2.COLOR_BGR2GRAY)
-            # h, w = gray_patch.shape
-            # nw = int(nh * w / h)
-            # gray_patch = cv2.resize(gray_patch, (nw, nh))
-            # gray_patch = np.expand_dims(gray_patch, axis=2)
-            # gray_patch = F.to_tensor(gray_patch)  # 这个标准步骤我以后还是做一下比较好，进行数据归一化
-            # gray_patch.sub_(0.5).div_(0.5)
-            text = self.reg_model.infer(img_patch)
-            texts.append(text)
 
-        assert len(texts) == len(bounding_boxes)
+        #对方框进行排序
+        boxes_coord = np.asarray(boxes_coord, dtype=int).tolist()
 
-        return bounding_boxes, texts, img_patches
+        # 检测结果排序第二版本
+        boxes_coord_t = sort_boxes(boxes_coord)
+        sort_ids = [boxes_coord.index(box_t) for box_t in boxes_coord_t]
+        labellist_t = np.array(labellist)[sort_ids]
+        labellist_t = labellist_t.tolist()
+
+
+        return boxes_coord_t, labellist_t
 
 
 if __name__ == '__main__':
@@ -114,16 +89,27 @@ if __name__ == '__main__':
 
     pipeline = OCRPipeLine()
 
-    img_base_path = '/home/chen/mcm/ctpn_test_2019_01_23/ocr_KBM_test/test_data/junior_biology/'
-    # img_base_path = '/media/Data/wangjunjie_code/pytorch_text_detection/demo/all-images/'
-    save_path = '/home/chen/hcn/data/C2TD_TEST/curve_res/junior_biology/'
+    img_base_path = '/media/Data/hcn/data/C2TD_TEST/problem'
+    save_path = '/media/Data/hzc/code/pytorch_deeplearning/tmp_1126'
 
-    font_ttf = "STKAITI.TTF"  # 可视化字体类型
-    font = ImageFont.truetype(font_ttf, 32)  # 字体与字体大小
-    print(pipeline.test_str)
+    imgpaths = glob.glob(os.path.join(img_base_path, '*.png'))
 
-    for img, file_name in tqdm(img_generator(img_base_path)):
-        bounding_boxes, texts, img_patches = pipeline.infer(img)
+    for img_path in tqdm(imgpaths):
+        # print(file_name)
+        basename = os.path.basename(img_path)
+        txtname = os.path.join(save_path, basename.split('.', 1)[0] + '.txt')
+        if os.path.exists(txtname):
+            continue
+        img = cv2.imread(img_path)
+        img, _ = correct_image(img)
+        cv2.imwrite(os.path.join(save_path, basename), img)
+        if max(img.shape) > 3000:
+            print(img.shape)
+        bounding_boxes, texts = pipeline.infer(img)
+        txtfile = open(txtname, 'w', encoding='utf-8')
+        for i in range(len(bounding_boxes)):
+            txtfile.write('{}, {}, {}, {}, {}\n'.format(int(bounding_boxes[i][0]), int(bounding_boxes[i][1]), int(bounding_boxes[i][2]), int(bounding_boxes[i][3]), texts[i]))
+        txtfile.close()
 
-        visualize(img, bounding_boxes, texts, img_patches, font, file_name, save_path)
+        # visualize(img, bounding_boxes, texts, img_patches, font, file_name, save_path)
 

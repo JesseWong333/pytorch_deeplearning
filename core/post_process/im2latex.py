@@ -4,14 +4,17 @@
 # All rights reserved.
 # @Time 2019/9/20
 
-from core.modules.beam_search import Translation
-from core.modules.text import Vocab
+# from core.modules.beam_search import Translation
+# from core.modules.text import Vocab
 from . import register_post_process
 
 
 @register_post_process
 class Im2latex_postprocess(object):
     def __init__(self, vocab_cfg, n_best=1, replace_unk=False):
+        from core.modules.beam_search import Translation
+        from core.modules.text import Vocab
+        self.Translation = Translation
         self.n_best = n_best
         self.vocab = Vocab(vocab_cfg)
         self.vocab_size = self.vocab.n_tok
@@ -85,7 +88,7 @@ class Im2latex_postprocess(object):
                 for n in range(self.n_best)]
             gold_sent = None
 
-            translation = Translation(
+            translation = self.Translation(
                 src[:, b] if src is not None else None,
                 src_raw, pred_sents, attn[b], pred_score[b],
                 gold_sent, gold_score[b]

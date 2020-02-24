@@ -104,7 +104,7 @@ config = dict(
     # parameters of continuing to train the model
     epoch_count=1,  # 如果是重新开始训练，该值始终应该为1
     continue_train=False,
-    load_models=['/home/chen/hcn/project/pytorch_deeplearning/checkpoints/im2latex-2/latest_net_net.pth'],  # 支持epoch导入，或者直接pth导入
+    load_models=['/home/chen/hcn/project/pytorch_deeplearning/checkpoints/im2latex/14_net_net.pth'],  # 支持epoch导入，或者直接pth导入
     # load_models=['/media/Data/wangjunjie_code/pytorch_text_detection/checkpoints/pixel_based_TPS_OHEM_weighted/60_net_net.pth'],
 
     verbose=True,
@@ -113,5 +113,4 @@ config = dict(
     save_epoch_freq=1,
     eval_iter_freq=3000,
     eval_epoch_freq=5,
-    im2latex_congigs='../configs/im2latex.yaml'
 )

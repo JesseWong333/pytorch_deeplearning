@@ -2,6 +2,7 @@ import time
 from visdom_visualize import Visualizer
 from core.data import build_dataset
 from core import build_model
+from configs.c2td_resnet import config  # todo argparse指定配置文件
 from core.evaluators import build_evaluator
 from utils.config_util import ConfigDict
 # from configs.im2latex import config  # todo argparse指定配置文件

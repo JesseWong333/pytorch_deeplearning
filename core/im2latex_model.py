@@ -9,7 +9,6 @@ im2latex
 import torch
 import torch.nn as nn
 import itertools
-# from core.losses.im2latex_loss import build_loss_compute
 from core.modules.text import Vocab
 from core.modules.beam_search import BeamSearch, GNMTGlobalScorer
 from core.modules.im2latex_moudle import pad_batch_formulas
