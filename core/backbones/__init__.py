@@ -1,9 +1,11 @@
 # Copyright (c) 2019-present, AI
 # All rights reserved.
 # @Time 2019/7/17
+
 import os
 import importlib
 import torch.nn as nn
+from module_config import black_module, white_module
 
 BACKBONE_REGISTRY = {}
 
@@ -26,6 +28,17 @@ def register_backbone(cls):
 
 # automatically import any Python files in the directory. while import the python file, register methods called
 for file in os.listdir(os.path.dirname(__file__)):
-    if file.endswith('.py') and not file.startswith('_'):
-        module = file[:file.find('.py')]
-        importlib.import_module('core.backbones.' + module)
+    # 白名单的中的表示only,（白名单为空时，表示不起作用）， 黑名单中的需要过滤
+    if not file.endswith('.py'):
+        continue
+    if file.startswith('_'):
+        continue
+    if len(black_module) > 0:
+        if file in black_module:
+            continue
+    if len(white_module) > 0:
+        if file not in white_module:
+            continue
+
+    module = file[:file.find('.py')]
+    importlib.import_module('core.backbones.' + module)

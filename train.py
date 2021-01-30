@@ -1,12 +1,12 @@
 import time
 from visdom_visualize import Visualizer
-from core.data import build_dataset
+from core.data import build_dataset  # 这个位置就已经导入了，怎么办 在import的时候代码执行
 from core import build_model
-from configs.c2td_resnet import config  # todo argparse指定配置文件
+from configs.c2td import config  # todo argparse指定配置文件
 from core.evaluators import build_evaluator
 from utils.config_util import ConfigDict
 # from configs.im2latex import config  # todo argparse指定配置文件
-from configs.text_recognition import config
+# from configs.text_recognition import config  # 如果这里指定了config， 如何在import时候导入到不同的组件中
 
 
 if __name__ == '__main__':

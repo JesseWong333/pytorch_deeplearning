@@ -69,6 +69,7 @@ hcn
 
 Jesse Wong
 - visdom子进程启动。可视化显示loss. 等待"支持训练时评估"功能完成后，接入更多的可视化展示
+
 hzc
 - 增加OCR通用识别模型， 检测，识别dataset
 - 训练预处理可配置pipe_line (常用预处理操作)

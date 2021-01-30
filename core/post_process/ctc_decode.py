@@ -93,7 +93,7 @@ class ctc_decoder(object):
             if subject != '英语':
                 ppls = np.array([len(list(self.jieba.cut(self.desymbol(candidate), HMM=True))) for candidate in bs_candidates])
                 alpha = 1.3
-                ppl_id = np.argmax(bs_candidates_prob / (alpha * (ppls - np.min(ppls)) + 1))
+                ppl_id = np.argmax(bs_candidates_prob / (alpha * (ppls - np.min(ppls)) + 1))  # 考虑了长度？
                 # for debug
                 # print(bs_candidates, bs_batch_candidate_ppl, min_ppl_id)
             else:
@@ -299,6 +299,7 @@ class strLabelConverter(object):
                         t[index:index + l], torch.IntTensor([l]), raw=raw))
                 index += l
             return texts
+
     def convert(self,t, length, raw=False):
         """
         没有加bs时的，ctc结果转换函数
